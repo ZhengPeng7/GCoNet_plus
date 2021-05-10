@@ -82,7 +82,7 @@ if __name__ == '__main__':
                         default=224,
                         type=int,
                         help='input size')
-    parser.add_argument('--ckpt', default='./ckpt/final_gconet.pth', type=str, help='model folder')
+    parser.add_argument('--ckpt', default='./ckpt/gconet_final.pth', type=str, help='model folder')
     parser.add_argument('--pred_dir', default='/home/pz1/datasets/sod/GCoNet_ext/preds', type=str, help='Output folder')
 
     args = parser.parse_args()

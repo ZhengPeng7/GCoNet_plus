@@ -48,7 +48,7 @@ parser.add_argument('--size',
                     default=224,
                     type=int,
                     help='input size')
-parser.add_argument('--ckpt', default=None, help='Temporary folder')
+parser.add_argument('--ckpt_dir', default=None, help='Temporary folder')
 
 args = parser.parse_args()
 
@@ -86,10 +86,10 @@ else:
 
 
 # make dir for ckpt
-os.makedirs(args.ckpt, exist_ok=True)
+os.makedirs(args.ckpt_dir, exist_ok=True)
 
 # Init log file
-logger = Logger(os.path.join(args.ckpt, "log.txt"))
+logger = Logger(os.path.join(args.ckpt_dir, "log.txt"))
 
 set_seed(1996)
 
@@ -159,11 +159,11 @@ def main():
                 'state_dict': model.ginet.state_dict(),
                 'scheduler': scheduler.state_dict(),
             },
-            path=args.ckpt)
+            path=args.ckpt_dir)
         if epoch > args.epochs - 10:
-            torch.save(ginet_dict, os.path.join(args.ckpt, 'gconet_ep{}.pth'.format(epoch)))
+            torch.save(ginet_dict, os.path.join(args.ckpt_dir, 'gconet_ep{}.pth'.format(epoch)))
     ginet_dict = model.ginet.state_dict()
-    torch.save(ginet_dict, os.path.join(args.ckpt, 'final_gconet.pth'))
+    torch.save(ginet_dict, os.path.join(args.ckpt_dir, 'gconet_final.pth'))
 
 def train(epoch):
     loss_log = AverageMeter()
