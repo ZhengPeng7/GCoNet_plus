@@ -18,7 +18,7 @@ def main(args):
     exec('from models import ' + args.model)
     model = eval(args.model+'()')
     model = model.to(device)
-    ginet_dict = torch.load(os.path.join(args.ckpt))
+    ginet_dict = torch.load(args.ckpt)
 
     model.to(device)
     model.ginet.load_state_dict(ginet_dict)
