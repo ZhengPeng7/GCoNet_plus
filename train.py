@@ -161,7 +161,7 @@ def main():
             },
             path=args.ckpt_dir)
         if epoch > args.epochs - 10:
-            torch.save(ginet_dict, os.path.join(args.ckpt_dir, 'gconet_ep{}.pth'.format(epoch)))
+            torch.save(model.ginet.state_dict(), os.path.join(args.ckpt_dir, 'gconet_ep{}.pth'.format(epoch)))
     ginet_dict = model.ginet.state_dict()
     torch.save(ginet_dict, os.path.join(args.ckpt_dir, 'gconet_final.pth'))
 

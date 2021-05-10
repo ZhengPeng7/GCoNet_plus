@@ -168,8 +168,8 @@ def main_plot(cfg):
 
 def main(cfg):
     output_dir = cfg.output_dir         # saving evaluation result
-    gt_dir = cfg.gt_dir                 # GT
     pred_dir = cfg.pred_dir             # predictions
+    gt_dir = cfg.gt_dir                 # GT
     if cfg.methods is None:
         method_names = os.listdir(pred_dir)
     else:
@@ -179,15 +179,19 @@ def main(cfg):
     else:
         dataset_names = cfg.datasets.split('+')
 
+    num_model_eval = 5
     threads = []
+    # model -> ckpt -> dataset
     for method in method_names:
-        for dataset in dataset_names:
-            loader = EvalDataset(
-                osp.join(pred_dir, method, dataset),        # GT
-                osp.join(gt_dir, dataset)                   # Label
-            )
-            thread = Eval_thread(loader, method, dataset, output_dir, cfg.cuda)
-            threads.append(thread)
+        epochs = os.listdir(os.path.join(pred_dir, method))[-num_model_eval:][::-1]
+        for epoch in epochs:
+            for dataset in dataset_names:
+                loader = EvalDataset(
+                    osp.join(pred_dir, method, epoch, dataset),        # preds
+                    osp.join(gt_dir, dataset)                   # GT
+                )
+                thread = Eval_thread(loader, method, dataset, os.path.join(output_dir, epoch), cfg.cuda)
+                threads.append(thread)
     for thread in threads:
         print(thread.run())
 
@@ -198,7 +202,7 @@ if __name__ == "__main__":
     parser.add_argument('--datasets', type=str, default='CoCA+CoSOD3k+CoSal2015')
 
     parser.add_argument('--gt_dir', type=str, default='/home/pz1/datasets/sod/gts')
-    parser.add_argument('--pred_dir', type=str, default='/home/pz1/datasets/sod/GCoNet_ext/preds')
+    parser.add_argument('--pred_dir', type=str, default='/home/pz1/datasets/sod/preds')
     parser.add_argument('--output_dir', type=str, default='./output/details')
     parser.add_argument('--output_figure', type=str, default='./output/figures')
 

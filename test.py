@@ -28,7 +28,8 @@ def main(args):
 
     tensor2pil = transforms.ToPILImage()
 
-    for testset in testsets.split('+'):
+    for testset in args.testsets.split('+'):
+        print('Testing {}...'.format(testset))
         root_dir = '../../../datasets/sod'
         if testset == 'CoCA':
             test_img_path = os.path.join(root_dir, 'images/CoCA')
@@ -83,7 +84,7 @@ if __name__ == '__main__':
                         type=int,
                         help='input size')
     parser.add_argument('--ckpt', default='./ckpt/gconet_final.pth', type=str, help='model folder')
-    parser.add_argument('--pred_dir', default='/home/pz1/datasets/sod/GCoNet_ext/preds', type=str, help='Output folder')
+    parser.add_argument('--pred_dir', default='/home/pz1/datasets/sod/preds/GCoNet_ext', type=str, help='Output folder')
 
     args = parser.parse_args()
 

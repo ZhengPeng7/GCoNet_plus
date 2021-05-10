@@ -8,14 +8,20 @@
 method="GCoNet_ext"
 
 # Train
-python train.py--loss DSLoss_IoU_noCAM --trainset DUTS_class --size 224 --ckpt_dir ckpt --lr 1e-4 --bs 16 --epochs 50
+python train.py --loss DSLoss_IoU_noCAM --trainset DUTS_class --size 224 --ckpt_dir ckpt --lr 1e-4 --bs 16 --epochs 5
 
-# Test
-python test.py --ckpt ckpt/gconet_final.pth --pred_dir /home/pz1/datasets/sod/${method}/preds
+# Test, --ckpt ckpt/gconet_epxx.pth, final == epochs - 1, don't do it twice
+python test.py --pred_dir /home/pz1/datasets/sod/preds/${method}/final --ckpt ckpt/gconet_final.pth
+
+for ep in {3,4}
+do
+python test.py --pred_dir /home/pz1/datasets/sod/preds/${method}/ep${ep} --ckpt ckpt/gconet_ep${ep}.pth
+done
+
 
 # Eval
 cd evaluation
-python main.py --gt_dir /home/pz1/datasets/sod/gts --pred_dir /home/pz1/datasets/sod/${method}/preds
+python main.py --methods ${method}
 cd ..
 
 
