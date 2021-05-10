@@ -1,18 +1,21 @@
 import os
 import time
+import json
 
 import numpy as np
+from scipy.io import savemat
 import torch
 from torchvision import transforms
 
 
 class Eval_thread():
-    def __init__(self, loader, method, dataset, output_dir, cuda):
+    def __init__(self, loader, method, dataset, output_dir, epoch, cuda):
         self.loader = loader
         self.method = method
         self.dataset = dataset
         self.cuda = cuda
         self.output_dir = output_dir
+        self.epoch = epoch
         self.logfile = os.path.join(output_dir, 'result.txt')
 
     def run(self):
@@ -53,20 +56,20 @@ class Eval_thread():
 
         s = self.Eval_Smeasure()
         Res['Sm'] = s
+
         os.makedirs(self.output_dir, exist_ok=True)
-        torch.save(Res, os.path.join(self.output_dir, self.dataset + '_' + self.method + '.pth'))
+        savemat(os.path.join(self.output_dir, self.method, self.epoch, self.dataset + '.mat'), Res)
 
         self.LOG(
-            '{} ({}): {:.4f} mae || {:.4f} max-fm || {:.4f} mean-fm || {:.4f} max-Emeasure || {:.4f} mean-Emeasure || {:.4f} S-measure || {:.4f} AP || {:.4f} AUC.\n'
-            .format(self.dataset, self.method, mae, max_f, mean_f, max_e,
-                    mean_e, s, avg_p, auc))
-        return '[cost:{:.4f}s] {} ({}): {:.4f} mae || {:.4f} max-fm || {:.4f} mean-fm || {:.4f} max-Emeasure || {:.4f} mean-Emeasure || {:.4f} S-measure || {:.4f} AP || {:.4f} AUC.'.format(
-            time.time() - start_time, self.dataset, self.method, mae, max_f,
-            mean_f, max_e, mean_e, s, avg_p, auc)
+            '{} ({}): {:.4f} max-Emeasure ||{:.4f} S-measure  || {:.4f} max-fm || {:.4f} mae || {:.4f} mean-Emeasure || {:.4f} mean-fm || {:.4f} AP || {:.4f} AUC.\n'
+            .format(self.dataset, self.method, max_e, s, max_f, mae, mean_e, mean_f, avg_p, auc)
+        )
+
+        return '[cost:{:.4f}s] {} ({}): {:.4f} max-Emeasure ||{:.4f} S-measure  || {:.4f} max-fm || {:.4f} mae || {:.4f} mean-Emeasure || {:.4f} mean-fm || {:.4f} AP || {:.4f} AUC.'.format(
+            time.time() - start_time, self.dataset, self.method, max_e, s, max_f, mae, mean_e, mean_f, avg_p, auc)
 
     def Eval_mae(self):
-        print('eval[MAE]:{} dataset with {} method.'.format(
-            self.dataset, self.method))
+        print('Evaluating MAE...')
         avg_mae, img_num = 0.0, 0.0
         with torch.no_grad():
             trans = transforms.Compose([transforms.ToTensor()])
@@ -85,8 +88,7 @@ class Eval_thread():
             return avg_mae.item()
 
     def Eval_fmeasure(self):
-        print('eval[FMeasure]:{} dataset with {} method.'.format(
-            self.dataset, self.method))
+        print('Evaluating FMeasure...')
         beta2 = 0.3
         avg_f, avg_p, avg_r, img_num = 0.0, 0.0, 0.0, 0.0
 
@@ -116,8 +118,7 @@ class Eval_thread():
             return Fm, avg_p, avg_r
 
     def Eval_auc(self):
-        print('eval[AUC]:{} dataset with {} method.'.format(
-            self.dataset, self.method))
+        print('Evaluating AUC...')
 
         avg_tpr, avg_fpr, avg_auc, img_num = 0.0, 0.0, 0.0, 0.0
 
@@ -149,8 +150,7 @@ class Eval_thread():
             return avg_auc.item(), avg_tpr, avg_fpr
 
     def Eval_Emeasure(self):
-        print('eval[EMeasure]:{} dataset with {} method.'.format(
-            self.dataset, self.method))
+        print('Evaluating EMeasure...')
         avg_e, img_num = 0.0, 0.0
         with torch.no_grad():
             trans = transforms.Compose([transforms.ToTensor()])
@@ -175,8 +175,7 @@ class Eval_thread():
             return Em
 
     def Eval_Smeasure(self):
-        print('eval[SMeasure]:{} dataset with {} method.'.format(
-            self.dataset, self.method))
+        print('Evaluating SMeasure...')
         alpha, avg_q, img_num = 0.5, 0.0, 0.0
         with torch.no_grad():
             trans = transforms.Compose([transforms.ToTensor()])
@@ -362,8 +361,7 @@ class Eval_thread():
     def Eval_AP(self, prec, recall):
         # Ref:
         # https://github.com/facebookresearch/Detectron/blob/05d04d3a024f0991339de45872d02f2f50669b3d/lib/datasets/voc_eval.py#L54
-        print('eval[AP]:{} dataset with {} method.'.format(
-            self.dataset, self.method))
+        print('Evaluating AP...')
         ap_r = np.concatenate(([0.], recall, [1.]))
         ap_p = np.concatenate(([0.], prec, [0.]))
         sorted_idxes = np.argsort(ap_r)

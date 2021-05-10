@@ -1,8 +1,12 @@
+import os
+import argparse
+
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.io import loadmat
 import torch
 import torch.nn as nn
-import argparse
-import os.path as osp
-import os
+
 from evaluator import Eval_thread
 from dataloader import EvalDataset
 
@@ -24,8 +28,7 @@ def main_plot(cfg):
         plt.figure()
         idx_style = 0
         for method in method_names:
-            iRes = torch.load(
-                os.path.join(cfg.output_dir, dataset + '_' + method + '.pth'))
+            iRes = loadmat(os.path.join(cfg.output_dir, method, 'final', dataset + '.mat'))
             imax = np.argmax(iRes['Fm'])
             plt.plot(
                 iRes['Recall'],
@@ -55,8 +58,7 @@ def main_plot(cfg):
         plt.figure()
         idx_style = 0
         for method in method_names:
-            iRes = torch.load(
-                os.path.join(cfg.output_dir, dataset + '_' + method + '.pth'))
+            iRes = loadmat(os.path.join(cfg.output_dir, method, 'final', dataset + '.mat'))
             imax = np.argmax(iRes['Fm'])
             plt.plot(
                 np.arange(0, 255),
@@ -84,8 +86,7 @@ def main_plot(cfg):
         plt.figure()
         idx_style = 0
         for method in method_names:
-            iRes = torch.load(
-                os.path.join(cfg.output_dir, dataset + '_' + method + '.pth'))
+            iRes = loadmat(os.path.join(cfg.output_dir, method, 'final', dataset + '.mat'))
             imax = np.argmax(iRes['Em'])
             plt.plot(
                 np.arange(0, 255),
@@ -113,8 +114,7 @@ def main_plot(cfg):
         plt.figure()
         idx_style = 0
         for method in method_names:
-            iRes = torch.load(
-                os.path.join(cfg.output_dir, dataset + '_' + method + '.pth'))
+            iRes = loadmat(os.path.join(cfg.output_dir, method, 'final', dataset + '.mat'))
             imax = np.argmax(iRes['Fm'])
             plt.plot(
                 iRes['FPR'],
@@ -143,8 +143,7 @@ def main_plot(cfg):
         plt.gca().invert_xaxis()
         idx_style = 0
         for method in method_names:
-            iRes = torch.load(
-                os.path.join(cfg.output_dir, dataset + '_' + method + '.pth'))
+            iRes = loadmat(os.path.join(cfg.output_dir, method, 'final', dataset + '.mat'))
             plt.scatter(iRes['MAE'],
                         iRes['Sm'],
                         marker=points[idx_style],
@@ -167,30 +166,28 @@ def main_plot(cfg):
 
 
 def main(cfg):
-    output_dir = cfg.output_dir         # saving evaluation result
-    pred_dir = cfg.pred_dir             # predictions
-    gt_dir = cfg.gt_dir                 # GT
     if cfg.methods is None:
-        method_names = os.listdir(pred_dir)
+        method_names = os.listdir(cfg.pred_dir)
     else:
         method_names = cfg.methods.split('+')
     if cfg.datasets is None:
-        dataset_names = os.listdir(gt_dir)
+        dataset_names = os.listdir(cfg.gt_dir)
     else:
         dataset_names = cfg.datasets.split('+')
 
-    num_model_eval = 5
+    num_model_eval = 10
     threads = []
     # model -> ckpt -> dataset
     for method in method_names:
-        epochs = os.listdir(os.path.join(pred_dir, method))[-num_model_eval:][::-1]
+        epochs = os.listdir(os.path.join(cfg.pred_dir, method))[-num_model_eval:][::-1]
         for epoch in epochs:
             for dataset in dataset_names:
                 loader = EvalDataset(
-                    osp.join(pred_dir, method, epoch, dataset),        # preds
-                    osp.join(gt_dir, dataset)                   # GT
+                    os.path.join(cfg.pred_dir, method, epoch, dataset),        # preds
+                    os.path.join(cfg.gt_dir, dataset)                   # GT
                 )
-                thread = Eval_thread(loader, method, dataset, os.path.join(output_dir, epoch), cfg.cuda)
+                print('Evaluating predictions from {}'.format(os.path.join(cfg.pred_dir, method, epoch, dataset)))
+                thread = Eval_thread(loader, method, dataset, cfg.output_dir, epoch, cfg.cuda)
                 threads.append(thread)
     for thread in threads:
         print(thread.run())
@@ -201,10 +198,10 @@ if __name__ == "__main__":
     parser.add_argument('--methods', type=str, default='GCoNet_ext')
     parser.add_argument('--datasets', type=str, default='CoCA+CoSOD3k+CoSal2015')
 
-    parser.add_argument('--gt_dir', type=str, default='/home/pz1/datasets/sod/gts')
-    parser.add_argument('--pred_dir', type=str, default='/home/pz1/datasets/sod/preds')
-    parser.add_argument('--output_dir', type=str, default='./output/details')
-    parser.add_argument('--output_figure', type=str, default='./output/figures')
+    parser.add_argument('--gt_dir', type=str, default='/home/pz1/datasets/sod/gts', help='GT')
+    parser.add_argument('--pred_dir', type=str, default='/home/pz1/datasets/sod/preds', help='predictions')
+    parser.add_argument('--output_dir', type=str, default='./output/details', help='saving measurements here.')
+    parser.add_argument('--output_figure', type=str, default='./output/figures', help='saving figures here.')
 
     parser.add_argument('--cuda', type=bool, default=True)
     config = parser.parse_args()

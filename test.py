@@ -18,6 +18,7 @@ def main(args):
     exec('from models import ' + args.model)
     model = eval(args.model+'()')
     model = model.to(device)
+    print('Testing with model {}'.format(args.ckpt))
     ginet_dict = torch.load(args.ckpt)
 
     model.to(device)
@@ -83,7 +84,7 @@ if __name__ == '__main__':
                         default=224,
                         type=int,
                         help='input size')
-    parser.add_argument('--ckpt', default='./ckpt/gconet_final.pth', type=str, help='model folder')
+    parser.add_argument('--ckpt', default='./ckpt/gconet/final.pth', type=str, help='model folder')
     parser.add_argument('--pred_dir', default='/home/pz1/datasets/sod/preds/GCoNet_ext', type=str, help='Output folder')
 
     args = parser.parse_args()

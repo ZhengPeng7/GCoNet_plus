@@ -1,4 +1,6 @@
+method="gconet"
+
 # Eval
 cd evaluation
-python main.py --methods GCoNet_ext+
+python main.py --methods ${method}
 cd ..
