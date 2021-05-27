@@ -9,7 +9,6 @@ from torchvision.transforms import functional as F
 from torchvision.transforms import InterpolationMode
 import numbers
 import random
-import pandas as pd
 
 
 class CoData(data.Dataset):
@@ -84,6 +83,7 @@ class CoData(data.Dataset):
 
             imgs[idx] = img
             gts[idx] = gt
+
         if self.is_train:
             cls_ls = [item] * int(final_num / 2) + [other_item] * int(final_num / 2)
             return imgs, gts, subpaths, ori_sizes, cls_ls
@@ -143,8 +143,6 @@ class RandomHorizontalFlip(object):
         return img, gt
 
 
-
-
 class RandomRotation(object):
     def __init__(self, degrees, resample=False, expand=False, center=None):
         if isinstance(degrees, numbers.Number):
@@ -179,6 +177,14 @@ class RandomRotation(object):
         return F.rotate(img, angle, InterpolationMode.BILINEAR, self.expand, self.center), F.rotate(gt, angle, InterpolationMode.NEAREST, self.expand, self.center)
 
 
+class ColorJitter(object):
+    def __init__(self, p=0.2):
+        self.trans = transforms.ColorJitter(brightness=p, contrast=p, saturation=p, hue=p)
+
+    def __call__(self, img, gt):
+        img = self.trans(img)
+        return img, gt
+
 
 class Compose(object):
     def __init__(self, transforms):
@@ -205,13 +211,13 @@ def get_loader(img_root, gt_root, img_size, batch_size, max_num = float('inf'), 
             FixedResize(img_size),
             RandomHorizontalFlip(),
             RandomRotation((-90, 90)),
+            # ColorJitter(p=0.2),
             ToTensor(),
             Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
     else:
         transform = Compose([
             FixedResize(img_size),
-            # RandomHorizontalFlip(),
             ToTensor(),
             Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])

@@ -10,6 +10,10 @@ import torch.nn as nn
 from evaluator import Eval_thread
 from dataloader import EvalDataset
 
+import sys
+sys.path.append('..')
+from config import Config
+
 
 styles = ['.-r', '.--b', '.--g', '.--c', '.-m', '.-y', '.-k', '.-c']
 lines = ['-', '--', '--', '--', '-', '-', '-', '-']
@@ -175,7 +179,7 @@ def main(cfg):
     else:
         dataset_names = cfg.datasets.split('+')
 
-    num_model_eval = 10
+    num_model_eval = Config().val_last
     threads = []
     # model -> ckpt -> dataset
     for method in method_names:
@@ -206,4 +210,4 @@ if __name__ == "__main__":
     parser.add_argument('--cuda', type=bool, default=True)
     config = parser.parse_args()
     main(config)
-    main_plot(config)
+    # main_plot(config)

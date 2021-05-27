@@ -1,3 +1,4 @@
+from random import seed
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -14,6 +15,9 @@ import torchvision.utils as vutils
 
 import torch.nn.functional as F
 import pytorch_toolbelt.losses as PTL
+
+from models.GCoNet import GCoNet
+from config import Config
 
 # Parameter from command line
 parser = argparse.ArgumentParser(description='')
@@ -60,8 +64,8 @@ if args.trainset == 'Jigsaw2_DUTS':
     train_loader = get_loader(train_img_path,
                               train_gt_path,
                               args.size,
-                              1, #args.bs,
-                              max_num=args.bs, #20,
+                              1,
+                              max_num=args.bs,
                               istrain=True,
                               shuffle=False,
                               num_workers=4,
@@ -73,17 +77,19 @@ elif args.trainset == 'DUTS_class':
     train_loader = get_loader(train_img_path,
                               train_gt_path,
                               args.size,
-                              1, #args.bs,
-                              max_num=args.bs, #16, #20,
+                              1,
+                              max_num=args.bs,
                               istrain=True,
                               shuffle=False,
-                              num_workers=8, #4,
+                              num_workers=8,
                               pin=True)
 
 else:
     print('Unkonwn train dataset')
     print(args.dataset)
 
+if Config().rand_seed:
+    set_seed(Config().rand_seed)
 
 # make dir for ckpt
 os.makedirs(args.ckpt_dir, exist_ok=True)
@@ -91,27 +97,24 @@ os.makedirs(args.ckpt_dir, exist_ok=True)
 # Init log file
 logger = Logger(os.path.join(args.ckpt_dir, "log.txt"))
 
-set_seed(1996)
-
 # Init model
 device = torch.device("cuda")
 
-exec('from models import ' + args.model)
-model = eval(args.model+'()')
+model = GCoNet()
 model = model.to(device)
 
-backbone_params = list(map(id, model.ginet.backbone.parameters()))
+backbone_params = list(map(id, model.bb.parameters()))
 base_params = filter(lambda p: id(p) not in backbone_params,
-                     model.ginet.parameters())
+                     model.parameters())
 
-all_params = [{'params': base_params}, {'params': model.ginet.backbone.parameters(), 'lr': args.lr * 0.01}]
+all_params = [{'params': base_params}, {'params': model.bb.parameters(), 'lr': args.lr * 0.01}]
 
 # Setting optimizer
 optimizer = optim.Adam(params=all_params, lr=args.lr, betas=[0.9, 0.99])
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer,step_size=50,gamma = 0.1)
 
 for key, value in model.named_parameters():
-    if 'ginet.backbone' in key and 'ginet.backbone.conv5.conv5_3' not in key:
+    if 'bb' in key and 'bb.conv5.conv5_3' not in key:
         value.requires_grad = False
 
 
@@ -140,7 +143,7 @@ def main():
             logger.info("=> loading checkpoint '{}'".format(args.resume))
             checkpoint = torch.load(args.resume)
             args.start_epoch = checkpoint['epoch']
-            model.ginet.load_state_dict(checkpoint['state_dict'])
+            model.load_state_dict(checkpoint['state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer'])
             scheduler.load_state_dict(checkpoint['scheduler'])
             logger.info("=> loaded checkpoint '{}' (epoch {})".format(
@@ -156,21 +159,20 @@ def main():
         save_checkpoint(
             {
                 'epoch': epoch + 1,
-                'state_dict': model.ginet.state_dict(),
+                'state_dict': model.state_dict(),
                 'scheduler': scheduler.state_dict(),
             },
             path=args.ckpt_dir)
-        if epoch >= args.epochs - 10:
-            torch.save(model.ginet.state_dict(), os.path.join(args.ckpt_dir, 'ep{}.pth'.format(epoch)))
-    ginet_dict = model.ginet.state_dict()
-    torch.save(ginet_dict, os.path.join(args.ckpt_dir, 'final.pth'))
+        if epoch >= args.epochs - Config().val_last:
+            torch.save(model.state_dict(), os.path.join(args.ckpt_dir, 'ep{}.pth'.format(epoch)))
+    gconet_dict = model.state_dict()
+    torch.save(gconet_dict, os.path.join(args.ckpt_dir, 'final.pth'))
 
 def train(epoch):
     loss_log = AverageMeter()
 
     # Switch to train mode
     model.train()
-    model.set_mode('train')
     #CE = torch.nn.BCEWithLogitsLoss()
     FL = PTL.BinaryFocalLoss()
 

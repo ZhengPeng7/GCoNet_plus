@@ -10,22 +10,22 @@ from criterion import Eval
 import argparse
 import numpy as np
 
+from models.GCoNet import GCoNet
+
 
 def main(args):
     # Init model
 
     device = torch.device("cuda")
-    exec('from models import ' + args.model)
-    model = eval(args.model+'()')
+    model = GCoNet()
     model = model.to(device)
     print('Testing with model {}'.format(args.ckpt))
-    ginet_dict = torch.load(args.ckpt)
+    gconet_dict = torch.load(args.ckpt)
 
     model.to(device)
-    model.ginet.load_state_dict(ginet_dict)
+    model.load_state_dict(gconet_dict)
 
     model.eval()
-    model.set_mode('test')
 
     tensor2pil = transforms.ToPILImage()
 
@@ -56,8 +56,8 @@ def main(args):
             gts = batch[1].to(device).squeeze(0)
             subpaths = batch[2]
             ori_sizes = batch[3]
-            
-            scaled_preds = model(inputs)[-1]
+            with torch.no_grad():
+                scaled_preds = model(inputs)[-1]
 
             os.makedirs(os.path.join(saved_root, subpaths[0][0].split('/')[0]), exist_ok=True)
 

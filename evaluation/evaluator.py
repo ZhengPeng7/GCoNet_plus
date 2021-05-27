@@ -15,7 +15,7 @@ class Eval_thread():
         self.dataset = dataset
         self.cuda = cuda
         self.output_dir = output_dir
-        self.epoch = epoch
+        self.epoch = epoch.split('ep')[-1]
         self.logfile = os.path.join(output_dir, 'result.txt')
 
     def run(self):
@@ -57,16 +57,16 @@ class Eval_thread():
         s = self.Eval_Smeasure()
         Res['Sm'] = s
 
-        os.makedirs(self.output_dir, exist_ok=True)
+        os.makedirs(os.path.join(self.output_dir, self.method, self.epoch), exist_ok=True)
         savemat(os.path.join(self.output_dir, self.method, self.epoch, self.dataset + '.mat'), Res)
 
         self.LOG(
             '{} ({}): {:.4f} max-Emeasure ||{:.4f} S-measure  || {:.4f} max-fm || {:.4f} mae || {:.4f} mean-Emeasure || {:.4f} mean-fm || {:.4f} AP || {:.4f} AUC.\n'
-            .format(self.dataset, self.method, max_e, s, max_f, mae, mean_e, mean_f, avg_p, auc)
+            .format(self.dataset, self.method+'-ep{}'.format(self.epoch), max_e, s, max_f, mae, mean_e, mean_f, avg_p, auc)
         )
 
         return '[cost:{:.4f}s] {} ({}): {:.4f} max-Emeasure ||{:.4f} S-measure  || {:.4f} max-fm || {:.4f} mae || {:.4f} mean-Emeasure || {:.4f} mean-fm || {:.4f} AP || {:.4f} AUC.'.format(
-            time.time() - start_time, self.dataset, self.method, max_e, s, max_f, mae, mean_e, mean_f, avg_p, auc)
+            time.time() - start_time, self.dataset, self.method+'-ep{}'.format(self.epoch), max_e, s, max_f, mae, mean_e, mean_f, avg_p, auc)
 
     def Eval_mae(self):
         print('Evaluating MAE...')

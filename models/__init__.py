@@ -1,1 +1,0 @@
-from .GCoNet import GCoNet
