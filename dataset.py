@@ -1,5 +1,5 @@
 import os
-from PIL import Image
+from PIL import Image, ImageEnhance
 import torch
 import random
 import numpy as np
@@ -10,219 +10,107 @@ from torchvision.transforms import InterpolationMode
 import numbers
 import random
 
+from preproc import cv_random_flip, random_crop, random_rotate, color_enhance, random_gaussian, random_pepper
+from config import Config
+
 
 class CoData(data.Dataset):
-    def __init__(self, img_root, gt_root, img_size, transform, max_num, is_train):
+    def __init__(self, image_root, label_root, image_size, max_num, is_train):
 
-        class_list = os.listdir(img_root)
-        self.size = [img_size, img_size]
-        self.img_dirs = list(
-            map(lambda x: os.path.join(img_root, x), class_list))
-        self.gt_dirs = list(
-            map(lambda x: os.path.join(gt_root, x), class_list))
-        self.transform = transform
+        class_list = os.listdir(image_root)
+        self.size_train = image_size
+        self.size_test = image_size
+        self.data_size = (self.size_train, self.size_train) if is_train else (self.size_test, self.size_test)
+        self.image_dirs = list(map(lambda x: os.path.join(image_root, x), class_list))
+        self.label_dirs = list(map(lambda x: os.path.join(label_root, x), class_list))
         self.max_num = max_num
         self.is_train = is_train
+        self.transform_image = transforms.Compose([
+            transforms.Resize(self.data_size),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+        ])
+        self.transform_label = transforms.Compose([
+            transforms.Resize(self.data_size),
+            transforms.ToTensor(),
+        ])
 
     def __getitem__(self, item):
-        names = os.listdir(self.img_dirs[item])
+        names = os.listdir(self.image_dirs[item])
         num = len(names)
-        img_paths = list(
-            map(lambda x: os.path.join(self.img_dirs[item], x), names))
-        gt_paths = list(
-            map(lambda x: os.path.join(self.gt_dirs[item], x[:-4]+'.png'), names))
+        image_paths = list(map(lambda x: os.path.join(self.image_dirs[item], x), names))
+        label_paths = list(map(lambda x: os.path.join(self.label_dirs[item], x[:-4]+'.png'), names))
 
         if self.is_train:
             # random pick one category
-            other_cls_ls = list(range(len(self.img_dirs)))
+            other_cls_ls = list(range(len(self.image_dirs)))
             other_cls_ls.remove(item)
             other_item = random.sample(set(other_cls_ls), 1)[0]
 
-            other_names = os.listdir(self.img_dirs[other_item])
+            other_names = os.listdir(self.image_dirs[other_item])
             other_num = len(other_names)
-            other_img_paths = list(
-                map(lambda x: os.path.join(self.img_dirs[other_item], x), other_names))
-            other_gt_paths = list(
-                map(lambda x: os.path.join(self.gt_dirs[other_item], x[:-4]+'.png'), other_names))
+            other_image_paths = list(map(lambda x: os.path.join(self.image_dirs[other_item], x), other_names))
+            other_label_paths = list(map(lambda x: os.path.join(self.label_dirs[other_item], x[:-4]+'.png'), other_names))
 
             final_num = min(num, other_num, self.max_num)
 
             sampled_list = random.sample(range(num), final_num)
-            new_img_paths = [img_paths[i] for i in sampled_list]
-            #img_paths = new_img_paths
-            new_gt_paths = [gt_paths[i] for i in sampled_list]
-            #gt_paths = new_gt_paths
-            #num =self.max_num
+            new_image_paths = [image_paths[i] for i in sampled_list]
+            new_label_paths = [label_paths[i] for i in sampled_list]
 
             other_sampled_list = random.sample(range(other_num), final_num)
-            new_img_paths = new_img_paths + [other_img_paths[i] for i in other_sampled_list]
-            img_paths = new_img_paths
-            new_gt_paths = new_gt_paths + [other_gt_paths[i] for i in other_sampled_list]
-            gt_paths = new_gt_paths
-            #final_num =self.max_num
+            new_image_paths = new_image_paths + [other_image_paths[i] for i in other_sampled_list]
+            image_paths = new_image_paths
+            new_label_paths = new_label_paths + [other_label_paths[i] for i in other_sampled_list]
+            label_paths = new_label_paths
 
             final_num = final_num * 2
         else:
             final_num = num
 
-        imgs = torch.Tensor(final_num, 3, self.size[0], self.size[1])
-        gts = torch.Tensor(final_num, 1, self.size[0], self.size[1])
+        images = torch.Tensor(final_num, 3, self.data_size[1], self.data_size[0])
+        labels = torch.Tensor(final_num, 1, self.data_size[1], self.data_size[0])
 
         subpaths = []
         ori_sizes = []
         for idx in range(final_num):
-            # print(idx)
-            img = Image.open(img_paths[idx]).convert('RGB')
-            gt = Image.open(gt_paths[idx]).convert('L')
+            image = Image.open(image_paths[idx]).convert('RGB')
+            label = Image.open(label_paths[idx]).convert('L')
 
-            subpaths.append(os.path.join(img_paths[idx].split('/')[-2], img_paths[idx].split('/')[-1][:-4]+'.png'))
-            ori_sizes.append((img.size[1], img.size[0]))
-            # ori_sizes += ((img.size[1], img.size[0]))
+            subpaths.append(os.path.join(image_paths[idx].split('/')[-2], image_paths[idx].split('/')[-1][:-4]+'.png'))
+            ori_sizes.append((image.size[1], image.size[0]))
 
-            [img, gt] = self.transform(img, gt)
+            # loading image and label
+            if self.is_train:
+                if 'flip' in Config().preproc_methods:
+                    image, label = cv_random_flip(image, label)
+                if 'crop' in Config().preproc_methods:
+                    image, label = random_crop(image, label)
+                if 'rotate' in Config().preproc_methods:
+                    image, label = random_rotate(image, label)
+                if 'enhance' in Config().preproc_methods:
+                    image = color_enhance(image)
+                if 'pepper' in Config().preproc_methods:
+                    label = random_pepper(label)
 
-            imgs[idx] = img
-            gts[idx] = gt
+            image, label = self.transform_image(image), self.transform_label(label)
+
+            images[idx] = image
+            labels[idx] = label
 
         if self.is_train:
             cls_ls = [item] * int(final_num / 2) + [other_item] * int(final_num / 2)
-            return imgs, gts, subpaths, ori_sizes, cls_ls
+            return images, labels, subpaths, ori_sizes, cls_ls
         else:
-            return imgs, gts, subpaths, ori_sizes
-            # return imgs, gts, class_names, [1, 2]
+            return images, labels, subpaths, ori_sizes
 
     def __len__(self):
-        return len(self.img_dirs)
-
-
-class FixedResize(object):
-    def __init__(self, size):
-        self.size = (size, size)  # size: (h, w)
-
-    def __call__(self, img, gt):
-        # assert img.size == gt.size
-
-        img = img.resize(self.size, Image.BILINEAR)
-        gt = gt.resize(self.size, Image.NEAREST)
-
-        return img, gt
-
-
-class ToTensor(object):
-    def __call__(self, img, gt):
-
-        return F.to_tensor(img), F.to_tensor(gt)
-
-
-class Normalize(object):
-    """Normalize a tensor image with mean and standard deviation.
-    Args:
-        mean (tuple): means for each channel.
-        std (tuple): standard deviations for each channel.
-    """
-
-    def __init__(self, mean=(0., 0., 0.), std=(1., 1., 1.)):
-        self.mean = mean
-        self.std = std
-
-    def __call__(self, img, gt):
-        img = F.normalize(img, self.mean, self.std)
-
-        return img, gt
-
-
-class RandomHorizontalFlip(object):
-    def __init__(self, p=0.5):
-        self.p = p
-
-    def __call__(self, img, gt):
-        if random.random() < self.p:
-            img = img.transpose(Image.FLIP_LEFT_RIGHT)
-            gt = gt.transpose(Image.FLIP_LEFT_RIGHT)
-
-        return img, gt
-
-
-class RandomRotation(object):
-    def __init__(self, degrees, resample=False, expand=False, center=None):
-        if isinstance(degrees, numbers.Number):
-            if degrees < 0:
-                raise ValueError("If degrees is a single number, it must be positive.")
-            self.degrees = (-degrees, degrees)
-        else:
-            if len(degrees) != 2:
-                raise ValueError("If degrees is a sequence, it must be of len 2.")
-            self.degrees = degrees
-
-        self.resample = resample
-        self.expand = expand
-        self.center = center
-
-    @staticmethod
-    def get_params(degrees):
-        angle = random.uniform(degrees[0], degrees[1])
-
-        return angle
-
-    def __call__(self, img, gt):
-        """
-            img (PIL Image): Image to be rotated.
-
-        Returns:
-            PIL Image: Rotated image.
-        """
-
-        angle = self.get_params(self.degrees)
-
-        return F.rotate(img, angle, InterpolationMode.BILINEAR, self.expand, self.center), F.rotate(gt, angle, InterpolationMode.NEAREST, self.expand, self.center)
-
-
-class ColorJitter(object):
-    def __init__(self, p=0.2):
-        self.trans = transforms.ColorJitter(brightness=p, contrast=p, saturation=p, hue=p)
-
-    def __call__(self, img, gt):
-        img = self.trans(img)
-        return img, gt
-
-
-class Compose(object):
-    def __init__(self, transforms):
-        self.transforms = transforms
-
-    def __call__(self, img, gt):
-        for t in self.transforms:
-            img, gt = t(img, gt)
-        return img, gt
-
-    def __repr__(self):
-        format_string = self.__class__.__name__ + '('
-        for t in self.transforms:
-            format_string += '\n'
-            format_string += '    {0}'.format(t)
-        format_string += '\n)'
-        return format_string
+        return len(self.image_dirs)
 
 
 # get the dataloader (Note: without data augmentation)
 def get_loader(img_root, gt_root, img_size, batch_size, max_num = float('inf'), istrain=True, shuffle=False, num_workers=0, pin=False):
-    if istrain:
-        transform = Compose([
-            FixedResize(img_size),
-            RandomHorizontalFlip(),
-            RandomRotation((-90, 90)),
-            # ColorJitter(p=0.2),
-            ToTensor(),
-            Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        ])
-    else:
-        transform = Compose([
-            FixedResize(img_size),
-            ToTensor(),
-            Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        ])
-
-    dataset = CoData(img_root, gt_root, img_size, transform, max_num, is_train=istrain)
+    dataset = CoData(img_root, gt_root, img_size, max_num, is_train=istrain)
     data_loader = data.DataLoader(dataset=dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers,
                                   pin_memory=pin)
     return data_loader

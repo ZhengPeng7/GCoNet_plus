@@ -64,8 +64,8 @@ if args.trainset == 'Jigsaw2_DUTS':
     train_loader = get_loader(train_img_path,
                               train_gt_path,
                               args.size,
-                              1,
-                              max_num=args.bs,
+                              1, #args.bs,
+                              max_num=args.bs, #20,
                               istrain=True,
                               shuffle=False,
                               num_workers=4,
@@ -77,11 +77,11 @@ elif args.trainset == 'DUTS_class':
     train_loader = get_loader(train_img_path,
                               train_gt_path,
                               args.size,
-                              1,
-                              max_num=args.bs,
+                              1, #args.bs,
+                              max_num=args.bs, #16, #20,
                               istrain=True,
                               shuffle=False,
-                              num_workers=8,
+                              num_workers=8, #4,
                               pin=True)
 
 else:
@@ -111,7 +111,7 @@ all_params = [{'params': base_params}, {'params': model.bb.parameters(), 'lr': a
 
 # Setting optimizer
 optimizer = optim.Adam(params=all_params, lr=args.lr, betas=[0.9, 0.99])
-scheduler = torch.optim.lr_scheduler.StepLR(optimizer,step_size=50,gamma = 0.1)
+scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=50, gamma = 0.1)
 
 for key, value in model.named_parameters():
     if 'bb' in key and 'bb.conv5.conv5_3' not in key:
