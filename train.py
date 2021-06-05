@@ -18,6 +18,8 @@ import pytorch_toolbelt.losses as PTL
 
 from models.GCoNet import GCoNet
 from config import Config
+from loss import saliency_structure_consistency
+from util import generate_smoothed_gt
 
 # Parameter from command line
 parser = argparse.ArgumentParser(description='')
@@ -26,13 +28,13 @@ parser.add_argument('--model',
                     type=str,
                     help="Options: '', ''")
 parser.add_argument('--loss',
-                    default='DSLoss_IoU',
+                    default='DSLoss_IoU_noCAM',
                     type=str,
                     help="Options: '', ''")
-parser.add_argument('--bs', '--batch_size', default=16, type=int)
+parser.add_argument('--bs', '--batch_size', default=48, type=int)
 parser.add_argument('--lr',
                     '--learning_rate',
-                    default=1e-4,
+                    default=3e-4,
                     type=float,
                     help='Initial learning rate')
 parser.add_argument('--resume',
@@ -183,10 +185,21 @@ def train(epoch):
         
         gts_neg = torch.full_like(gts, 0.0)
         gts_cat = torch.cat([gts, gts_neg], dim=0)
-        #print(cls_gts, gts.shape)
         scaled_preds, pred_cls, pred_x5 = model(inputs)
+        atts = scaled_preds[-1]
 
-        loss_sal = dsloss(scaled_preds, gts)
+        if Config().label_smoothing:
+            loss_sal = 0.5 * dsloss(scaled_preds, gts) + dsloss(scaled_preds, generate_smoothed_gt(gts))
+        else:
+            loss_sal = dsloss(scaled_preds, gts)
+        if Config().self_supervision:
+            H, W = inputs.shape[-2:]
+            images_scale = F.interpolate(inputs, size=(H//4, W//4), mode='bilinear', align_corners=True)
+            sal_scale = model(images_scale)[0][-1]
+            sal_s = F.interpolate(atts, size=(H//4, W//4), mode='bilinear', align_corners=True)
+            loss_ss = saliency_structure_consistency(sal_scale, sal_s)
+            loss_sal += loss_ss * 0.3
+
         loss_cls = F.cross_entropy(pred_cls, cls_gts) * 3.0
         loss_x5 = FL(pred_x5, gts_cat) * 250.0
         loss = loss_sal + loss_cls + loss_x5

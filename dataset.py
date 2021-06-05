@@ -99,7 +99,7 @@ class CoData(data.Dataset):
             labels[idx] = label
 
         if self.is_train:
-            cls_ls = [item] * int(final_num / 2) + [other_item] * int(final_num / 2)
+            cls_ls = [item] * (final_num // 2) + [other_item] * (final_num // 2)
             return images, labels, subpaths, ori_sizes, cls_ls
         else:
             return images, labels, subpaths, ori_sizes

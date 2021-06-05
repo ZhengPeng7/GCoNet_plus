@@ -8,6 +8,12 @@ import random
 import cv2
 
 
+def generate_smoothed_gt(gts):
+    epsilon = 0.001
+    new_gts = (1-epsilon)*gts+epsilon/2
+    return new_gts
+
+
 class Logger():
     def __init__(self, path="log.txt"):
         self.logger = logging.getLogger('DGNet')

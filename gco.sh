@@ -6,12 +6,12 @@
 
 # Run python script
 method="gconet_$1"
-size=300
-epochs=65
+size=224
+epochs=52
 val_last=10
 
 # Train
-python train.py --loss DSLoss_IoU_noCAM --trainset DUTS_class --size ${size} --ckpt_dir ckpt/${method} --lr 3e-4 --bs 48 --epochs 55
+python train.py --trainset DUTS_class --size ${size} --ckpt_dir ckpt/${method} --epochs ${epochs}
 
 for ((ep=${epochs}-${val_last};ep<${epochs};ep++))
 do

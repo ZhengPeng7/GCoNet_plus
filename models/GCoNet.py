@@ -47,7 +47,7 @@ class GCoNet(nn.Module):
         self.co_x5 = CoAttLayer()
 
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.classifier = nn.Linear(512, 291)
+        self.classifier = nn.Linear(512, 291)       # DUTS_class has 291 classes
 
         for layer in [self.classifier]:
             weight_init.c2_msra_fill(layer)
