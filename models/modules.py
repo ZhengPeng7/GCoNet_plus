@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -56,6 +57,55 @@ class half_DSLayer(nn.Module):
         return x
 
 
+class CoAttLayer(nn.Module):
+    def __init__(self, channel_in=512):
+        super(CoAttLayer, self).__init__()
+
+        self.all_attention = eval(Config().relation_module + '(channel_in)')
+        self.conv_output = nn.Conv2d(channel_in, channel_in, kernel_size=1, stride=1, padding=0) 
+        self.conv_transform = nn.Conv2d(channel_in, channel_in, kernel_size=1, stride=1, padding=0) 
+        self.fc_transform = nn.Linear(channel_in, channel_in)
+
+        for layer in [self.conv_output, self.conv_transform, self.fc_transform]:
+            weight_init.c2_msra_fill(layer)
+    
+    def forward(self, x5):
+        if self.training:
+            f_begin = 0
+            f_end = int(x5.shape[0] / 2)
+            s_begin = f_end
+            s_end = int(x5.shape[0])
+
+            x5_1 = x5[f_begin: f_end]
+            x5_2 = x5[s_begin: s_end]
+
+            x5_new_1 = self.all_attention(x5_1)
+            x5_new_2 = self.all_attention(x5_2)
+
+            x5_1_proto = torch.mean(x5_new_1, (0, 2, 3), True).view(1, -1)
+            x5_1_proto = x5_1_proto.unsqueeze(-1).unsqueeze(-1) # 1, C, 1, 1
+
+            x5_2_proto = torch.mean(x5_new_2, (0, 2, 3), True).view(1, -1)
+            x5_2_proto = x5_2_proto.unsqueeze(-1).unsqueeze(-1) # 1, C, 1, 1
+
+            x5_11 = x5_1 * x5_1_proto
+            x5_22 = x5_2 * x5_2_proto
+            weighted_x5 = torch.cat([x5_11, x5_22], dim=0)
+
+            x5_12 = x5_1 * x5_2_proto
+            x5_21 = x5_2 * x5_1_proto
+            neg_x5 = torch.cat([x5_12, x5_21], dim=0)
+        else:
+
+            x5_new = self.all_attention(x5)
+            x5_proto = torch.mean(x5_new, (0, 2, 3), True).view(1, -1)
+            x5_proto = x5_proto.unsqueeze(-1).unsqueeze(-1) # 1, C, 1, 1
+
+            weighted_x5 = x5 * x5_proto #* cweight
+            neg_x5 = None
+        return weighted_x5, neg_x5
+
+
 class ICE(nn.Module):
     # The Integrity Channel Enhancement (ICE) module
     # _X means in X-th column
@@ -98,15 +148,15 @@ class ICE(nn.Module):
 
 
 class GAM(nn.Module):
-    def __init__(self, input_channels=512):
+    def __init__(self, channel_in=512):
 
         super(GAM, self).__init__()
-        self.query_transform = nn.Conv2d(input_channels, input_channels, kernel_size=1, stride=1, padding=0) 
-        self.key_transform = nn.Conv2d(input_channels, input_channels, kernel_size=1, stride=1, padding=0) 
+        self.query_transform = nn.Conv2d(channel_in, channel_in, kernel_size=1, stride=1, padding=0) 
+        self.key_transform = nn.Conv2d(channel_in, channel_in, kernel_size=1, stride=1, padding=0) 
 
-        self.scale = 1.0 / (input_channels ** 0.5)
+        self.scale = 1.0 / (channel_in ** 0.5)
 
-        self.conv6 = nn.Conv2d(input_channels, input_channels, kernel_size=1, stride=1, padding=0) 
+        self.conv6 = nn.Conv2d(channel_in, channel_in, kernel_size=1, stride=1, padding=0) 
 
         for layer in [self.query_transform, self.key_transform, self.conv6]:
             weight_init.c2_msra_fill(layer)
@@ -142,18 +192,81 @@ class GAM(nn.Module):
 
 
 class MHA(nn.Module):
-    def __init__(self, channel_in=512, num_heads=8):
-        super(MHA, self).__init__()
-        self.norm_layer = nn.LayerNorm(channel_in)
-        self.multi_head_attention = nn.MultiheadAttention(embed_dim=channel_in, num_heads=num_heads)
+    '''
+    Scaled dot-product attention
+    '''
 
-    def forward(self, x):
-        bs, ch, h, w = x.shape
-        y = x.view(bs, -1, ch)
-        y = self.multi_head_attention(y, y, y)[0]
-        y = y.view(bs, h, w, ch).transpose(-1, -2).transpose(-2, -3)
-        x = x + y
-        return x
+    def __init__(self, d_model=512, d_k=512, d_v=512, h=8, dropout=.1, channel_in=512):
+        '''
+        :param d_model: Output dimensionality of the model
+        :param d_k: Dimensionality of queries and keys
+        :param d_v: Dimensionality of values
+        :param h: Number of heads
+        '''
+        super(MHA, self).__init__()
+        self.query_transform = nn.Conv2d(channel_in, channel_in, kernel_size=1, stride=1, padding=0)
+        self.key_transform = nn.Conv2d(channel_in, channel_in, kernel_size=1, stride=1, padding=0)
+        self.value_transform = nn.Conv2d(channel_in, channel_in, kernel_size=1, stride=1, padding=0)
+        self.fc_q = nn.Linear(d_model, h * d_k)
+        self.fc_k = nn.Linear(d_model, h * d_k)
+        self.fc_v = nn.Linear(d_model, h * d_v)
+        self.fc_o = nn.Linear(h * d_v, d_model)
+        self.dropout = nn.Dropout(dropout)
+
+        self.d_model = d_model
+        self.d_k = d_k
+        self.d_v = d_v
+        self.h = h
+
+        self.init_weights()
+
+    def init_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out')
+                if m.bias is not None:
+                    nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.BatchNorm2d):
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.Linear):
+                nn.init.normal_(m.weight, std=0.001)
+                if m.bias is not None:
+                    nn.init.constant_(m.bias, 0)
+
+    def forward(self, x, attention_mask=None, attention_weights=None):
+        '''
+        Computes
+        :param queries: Queries (b_s, nq, d_model)
+        :param keys: Keys (b_s, nk, d_model)
+        :param values: Values (b_s, nk, d_model)
+        :param attention_mask: Mask over attention values (b_s, h, nq, nk). True indicates masking.
+        :param attention_weights: Multiplicative weights for attention values (b_s, h, nq, nk).
+        :return:
+        '''
+        B, C, H, W = x.size()
+        queries = self.query_transform(x).view(B, -1, C)
+        keys = self.query_transform(x).view(B, -1, C)
+        values = self.query_transform(x).view(B, -1, C)
+
+        b_s, nq = queries.shape[:2]
+        nk = keys.shape[1]
+
+        q = self.fc_q(queries).view(b_s, nq, self.h, self.d_k).permute(0, 2, 1, 3)  # (b_s, h, nq, d_k)
+        k = self.fc_k(keys).view(b_s, nk, self.h, self.d_k).permute(0, 2, 3, 1)  # (b_s, h, d_k, nk)
+        v = self.fc_v(values).view(b_s, nk, self.h, self.d_v).permute(0, 2, 1, 3)  # (b_s, h, nk, d_v)
+
+        att = torch.matmul(q, k) / np.sqrt(self.d_k)  # (b_s, h, nq, nk)
+        if attention_weights is not None:
+            att = att * attention_weights
+        if attention_mask is not None:
+            att = att.masked_fill(attention_mask, -np.inf)
+        att = torch.softmax(att, -1)
+        att = self.dropout(att)
+
+        out = torch.matmul(att, v).permute(0, 2, 1, 3).contiguous().view(b_s, nq, self.h * self.d_v)  # (b_s, nq, h*d_v)
+        out = self.fc_o(out).view(B, C, H, W)  # (b_s, nq, d_model)
+        return out
 
 
 class NonLocal(nn.Module):
@@ -220,51 +333,3 @@ class NonLocal(nn.Module):
         if return_nl_map:
             return z, f_div_C
         return z
-
-class CoAttLayer(nn.Module):
-    def __init__(self, input_channels=512):
-        super(CoAttLayer, self).__init__()
-
-        self.all_attention = eval(Config().relation_module + '(input_channels)')
-        self.conv_output = nn.Conv2d(input_channels, input_channels, kernel_size=1, stride=1, padding=0) 
-        self.conv_transform = nn.Conv2d(input_channels, input_channels, kernel_size=1, stride=1, padding=0) 
-        self.fc_transform = nn.Linear(input_channels, input_channels)
-
-        for layer in [self.conv_output, self.conv_transform, self.fc_transform]:
-            weight_init.c2_msra_fill(layer)
-    
-    def forward(self, x5):
-        if self.training:
-            f_begin = 0
-            f_end = int(x5.shape[0] / 2)
-            s_begin = f_end
-            s_end = int(x5.shape[0])
-
-            x5_1 = x5[f_begin: f_end]
-            x5_2 = x5[s_begin: s_end]
-
-            x5_new_1 = self.all_attention(x5_1)
-            x5_new_2 = self.all_attention(x5_2)
-
-            x5_1_proto = torch.mean(x5_new_1, (0, 2, 3), True).view(1, -1)
-            x5_1_proto = x5_1_proto.unsqueeze(-1).unsqueeze(-1) # 1, C, 1, 1
-
-            x5_2_proto = torch.mean(x5_new_2, (0, 2, 3), True).view(1, -1)
-            x5_2_proto = x5_2_proto.unsqueeze(-1).unsqueeze(-1) # 1, C, 1, 1
-
-            x5_11 = x5_1 * x5_1_proto
-            x5_22 = x5_2 * x5_2_proto
-            weighted_x5 = torch.cat([x5_11, x5_22], dim=0)
-
-            x5_12 = x5_1 * x5_2_proto
-            x5_21 = x5_2 * x5_1_proto
-            neg_x5 = torch.cat([x5_12, x5_21], dim=0)
-        else:
-
-            x5_new = self.all_attention(x5)
-            x5_proto = torch.mean(x5_new, (0, 2, 3), True).view(1, -1)
-            x5_proto = x5_proto.unsqueeze(-1).unsqueeze(-1) # 1, C, 1, 1
-
-            weighted_x5 = x5 * x5_proto #* cweight
-            neg_x5 = None
-        return weighted_x5, neg_x5

@@ -71,15 +71,15 @@ class half_DSLayer(nn.Module):
 
 
 class AllAttLayer(nn.Module):
-    def __init__(self, input_channels=512):
+    def __init__(self, channel_in=512):
 
         super(AllAttLayer, self).__init__()
-        self.query_transform = Conv2d(input_channels, input_channels, kernel_size=1, stride=1, padding=0) 
-        self.key_transform = Conv2d(input_channels, input_channels, kernel_size=1, stride=1, padding=0) 
+        self.query_transform = Conv2d(channel_in, channel_in, kernel_size=1, stride=1, padding=0) 
+        self.key_transform = Conv2d(channel_in, channel_in, kernel_size=1, stride=1, padding=0) 
 
-        self.scale = 1.0 / (input_channels ** 0.5)
+        self.scale = 1.0 / (channel_in ** 0.5)
 
-        self.conv6 = Conv2d(input_channels, input_channels, kernel_size=1, stride=1, padding=0) 
+        self.conv6 = Conv2d(channel_in, channel_in, kernel_size=1, stride=1, padding=0) 
 
         for layer in [self.query_transform, self.key_transform, self.conv6]:
             weight_init.c2_msra_fill(layer)
@@ -114,14 +114,14 @@ class AllAttLayer(nn.Module):
         return x5
 
 class CoAttLayer(nn.Module):
-    def __init__(self, input_channels=512):
+    def __init__(self, channel_in=512):
 
         super(CoAttLayer, self).__init__()
 
-        self.all_attention = AllAttLayer(input_channels)
-        self.conv_output = Conv2d(input_channels, input_channels, kernel_size=1, stride=1, padding=0) 
-        self.conv_transform = Conv2d(input_channels, input_channels, kernel_size=1, stride=1, padding=0) 
-        self.fc_transform = nn.Linear(input_channels, input_channels)
+        self.all_attention = AllAttLayer(channel_in)
+        self.conv_output = Conv2d(channel_in, channel_in, kernel_size=1, stride=1, padding=0) 
+        self.conv_transform = Conv2d(channel_in, channel_in, kernel_size=1, stride=1, padding=0) 
+        self.fc_transform = nn.Linear(channel_in, channel_in)
 
         for layer in [self.conv_output, self.conv_transform, self.fc_transform]:
             weight_init.c2_msra_fill(layer)

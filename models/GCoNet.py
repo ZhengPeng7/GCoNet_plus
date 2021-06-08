@@ -4,33 +4,49 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchvision.models import vgg16
 import fvcore.nn.weight_init as weight_init
+from torchvision.models import resnet50
 
 from models.modules import ResBlk, DSLayer, half_DSLayer, CoAttLayer
 
+from config import Config
+
 
 class GCoNet(nn.Module):
-    def __init__(self):
+    def __init__(self, bb=Config().bb):
         super(GCoNet, self).__init__()
-        bb_vgg16 = list(vgg16(pretrained=True).children())[0]
-        bb_convs = OrderedDict({
-            'conv1': bb_vgg16[:4],
-            'conv2': bb_vgg16[4:9],
-            'conv3': bb_vgg16[9:16],
-            'conv4': bb_vgg16[16:23],
-            'conv5': bb_vgg16[23:30]}
-        )
+        if bb == 'vgg16':
+            bb_vgg16 = list(vgg16(pretrained=True).children())[0]
+            bb_convs = OrderedDict({
+                'conv1': bb_vgg16[:4],
+                'conv2': bb_vgg16[4:9],
+                'conv3': bb_vgg16[9:16],
+                'conv4': bb_vgg16[16:23],
+                'conv5': bb_vgg16[23:30]
+            })
+            channel_scale = 1
+        elif bb == 'resnet50':
+            bb_resnet50 = list(resnet50(pretrained=True).children())
+            bb_convs = OrderedDict({
+                'conv1': nn.Sequential(*bb_resnet50[0:3]),
+                'conv2': bb_resnet50[4],
+                'conv3': bb_resnet50[5],
+                'conv4': bb_resnet50[6],
+                'conv5': bb_resnet50[7]
+            })
+            channel_scale = 4
         self.bb = nn.Sequential(bb_convs)
 
         self.top_layer = nn.Sequential(
-            nn.Conv2d(512, 64, kernel_size=1, stride=1, padding=0),
+            nn.Conv2d(512*channel_scale, 64, kernel_size=1, stride=1, padding=0),
             nn.ReLU(inplace=True),
             nn.Conv2d(64, 64, kernel_size=1, stride=1, padding=0)
         )
 
-        self.latlayer4 = ResBlk(channel_in=512)
-        self.latlayer3 = ResBlk(channel_in=256)
-        self.latlayer2 = ResBlk(channel_in=128)
-        self.latlayer1 = ResBlk(channel_in=64)
+        channel_scale_latlayer = channel_scale // 2 if bb == 'resnet50' else 1
+        self.latlayer4 = ResBlk(channel_in=512*channel_scale_latlayer)
+        self.latlayer3 = ResBlk(channel_in=256*channel_scale_latlayer)
+        self.latlayer2 = ResBlk(channel_in=128*channel_scale_latlayer)
+        self.latlayer1 = ResBlk(channel_in=64*1)
 
         self.enlayer4 = ResBlk()
         self.enlayer3 = ResBlk()
@@ -42,12 +58,12 @@ class GCoNet(nn.Module):
         self.dslayer2 = DSLayer()
         self.dslayer1 = DSLayer()
 
-        self.pred_layer = half_DSLayer(512)
+        self.pred_layer = half_DSLayer(512*channel_scale)
 
-        self.co_x5 = CoAttLayer()
+        self.co_x5 = CoAttLayer(channel_in=512*channel_scale)
 
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.classifier = nn.Linear(512, 291)       # DUTS_class has 291 classes
+        self.classifier = nn.Linear(512*channel_scale, 291)       # DUTS_class has 291 classes
 
         for layer in [self.classifier]:
             weight_init.c2_msra_fill(layer)

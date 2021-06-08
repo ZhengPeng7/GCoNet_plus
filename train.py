@@ -113,11 +113,12 @@ all_params = [{'params': base_params}, {'params': model.bb.parameters(), 'lr': a
 
 # Setting optimizer
 optimizer = optim.Adam(params=all_params, lr=args.lr, betas=[0.9, 0.99])
-scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=50, gamma = 0.1)
+scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=Config().decay_step_size, gamma=0.1)
 
-for key, value in model.named_parameters():
-    if 'bb' in key and 'bb.conv5.conv5_3' not in key:
-        value.requires_grad = False
+# Why freeze the backbone?...
+# for key, value in model.named_parameters():
+#     if 'bb' in key and 'bb.conv5.conv5_3' not in key:
+#         value.requires_grad = False
 
 
 # log model and optimizer pars
@@ -153,7 +154,6 @@ def main():
         else:
             logger.info("=> no checkpoint found at '{}'".format(args.resume))
 
-    print(args.epochs)
     for epoch in range(args.start_epoch, args.epochs):
         train_loss = train(epoch)
 
