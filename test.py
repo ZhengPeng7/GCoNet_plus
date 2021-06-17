@@ -6,7 +6,6 @@ from util import save_tensor_img, Logger
 from tqdm import tqdm
 from torch import nn
 import os
-from criterion import Eval
 import argparse
 import numpy as np
 
@@ -26,8 +25,6 @@ def main(args):
     model.load_state_dict(gconet_dict)
 
     model.eval()
-
-    tensor2pil = transforms.ToPILImage()
 
     for testset in args.testsets.split('+'):
         print('Testing {}...'.format(testset))

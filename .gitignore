@@ -4,6 +4,7 @@ ckpt
 preds
 evaluation/output
 *.out
+tmp*
 
 
 # Byte-compiled / optimized / DLL files

@@ -34,6 +34,7 @@ class CoData(data.Dataset):
             transforms.Resize(self.data_size),
             transforms.ToTensor(),
         ])
+        self.load_all = True
 
     def __getitem__(self, item):
         names = os.listdir(self.image_dirs[item])
@@ -74,8 +75,13 @@ class CoData(data.Dataset):
         subpaths = []
         ori_sizes = []
         for idx in range(final_num):
-            image = Image.open(image_paths[idx]).convert('RGB')
-            label = Image.open(label_paths[idx]).convert('L')
+            if self.load_all:
+                # TODO
+                image = Image.open(image_paths[idx]).convert('RGB')
+                label = Image.open(label_paths[idx]).convert('L')
+            else:
+                image = Image.open(image_paths[idx]).convert('RGB')
+                label = Image.open(label_paths[idx]).convert('L')
 
             subpaths.append(os.path.join(image_paths[idx].split('/')[-2], image_paths[idx].split('/')[-1][:-4]+'.png'))
             ori_sizes.append((image.size[1], image.size[0]))

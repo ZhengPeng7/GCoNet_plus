@@ -1,6 +1,9 @@
 from torch.utils import data
 import os
-from PIL import Image
+from PIL import Image, ImageFile
+
+
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 
 class EvalDataset(data.Dataset):
@@ -22,9 +25,14 @@ class EvalDataset(data.Dataset):
         self.label_path = list(
             map(lambda x: os.path.join(label_root, x), dir_name_list))
 
+        self.labels = []
+        for p in self.label_path:
+            self.labels.append(Image.open(p).convert('L'))
+
+
     def __getitem__(self, item):
         pred = Image.open(self.image_path[item]).convert('L')
-        gt = Image.open(self.label_path[item]).convert('L')
+        gt = self.labels[item]
         if pred.size != gt.size:
             pred = pred.resize(gt.size, Image.BILINEAR)
         return pred, gt

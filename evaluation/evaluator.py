@@ -7,9 +7,12 @@ from scipy.io import savemat
 import torch
 from torchvision import transforms
 
+from PIL import ImageFile
+ImageFile.LOAD_TRUNCATED_IMAGES = True
+
 
 class Eval_thread():
-    def __init__(self, loader, method, dataset, output_dir, epoch, cuda):
+    def __init__(self, loader, method='', dataset='', output_dir='', epoch='', cuda=True):
         self.loader = loader
         self.method = method
         self.dataset = dataset
@@ -69,7 +72,8 @@ class Eval_thread():
             time.time() - start_time, self.dataset, self.method+'-ep{}'.format(self.epoch), max_e, s, max_f, mae, mean_e, mean_f, avg_p, auc)
 
     def Eval_mae(self):
-        print('Evaluating MAE...')
+        if self.epoch:
+            print('Evaluating MAE...')
         avg_mae, img_num = 0.0, 0.0
         with torch.no_grad():
             trans = transforms.Compose([transforms.ToTensor()])
