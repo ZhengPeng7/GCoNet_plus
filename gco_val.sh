@@ -11,7 +11,7 @@ epochs=30
 val_last=29
 
 # Train
-python train.py --trainset DUTS_class --size ${size} --ckpt_dir ckpt/${method} --epochs ${epochs}
+python train.py --trainset DUTS_class --size ${size} --ckpt_dir ckpt/${method} --epochs ${epochs} --val_dir tmp4val_${method}
 
 for ((ep=${epochs}-${val_last};ep<${epochs};ep++))
 do

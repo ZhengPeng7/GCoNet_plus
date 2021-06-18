@@ -5,7 +5,7 @@ rm slurm*
 rm -r ckpt
 
 # Eval
-rm -r tmp4val
+rm -r tmp4val*
 rm -r evaluation/output
 rm -r evaluation/score_sorted.txt
 rm -r evaluation/${method}_*.png

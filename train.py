@@ -46,7 +46,7 @@ parser.add_argument('--resume',
                     default=None,
                     type=str,
                     help='path to latest checkpoint')
-parser.add_argument('--epochs', default=50, type=int)
+parser.add_argument('--epochs', default=30, type=int)
 parser.add_argument('--start_epoch',
                     default=0,
                     type=int,
@@ -65,6 +65,11 @@ parser.add_argument('--testsets',
                     default='CoCA+CoSOD3k+CoSal2015',
                     type=str,
                     help="Options: 'CoCA','CoSal2015','CoSOD3k','iCoseg','MSRC'")
+
+parser.add_argument('--val_dir',
+                    default='tmp4val',
+                    type=str,
+                    help="Dir for saving tmp results for validation.")
 
 args = parser.parse_args()
 
@@ -156,7 +161,7 @@ dsloss = eval(args.loss+'()')
 
 
 def main():
-    val_e_measure = []
+    val_measures = []
 
     # Optionally resume from a checkpoint
     if args.resume:
@@ -174,10 +179,10 @@ def main():
 
     for epoch in range(args.start_epoch, args.epochs):
         train_loss = train(epoch)
-        e_measures = validate(model, test_loaders, args.testsets)
-        val_e_measure.append(e_measures)
+        measures = validate(model, test_loaders, args.testsets)
+        val_measures.append(measures)
         print('Validation: E_max on CoCA for epoch-{} is {:.4f}. Best epoch is epoch-{} with E_max {:.4f}'.format(
-            epoch, e_measures[0], np.argmin(np.array(val_e_measure)[:, 0].squeeze()), np.min(np.array(val_e_measure)[:, 0]))
+            epoch, measures[0], np.argmax(np.array(val_measures)[:, 0].squeeze()), np.max(np.array(val_measures)[:, 0]))
         )
         # Save checkpoint
         save_checkpoint(
@@ -189,11 +194,11 @@ def main():
             path=args.ckpt_dir)
         if epoch >= args.epochs - Config().val_last:
             torch.save(model.state_dict(), os.path.join(args.ckpt_dir, 'ep{}.pth'.format(epoch)))
-        if np.max(val_e_measure) == e_measures:
+        if np.max(np.array(val_measures)[:, 0].squeeze()) == measures[0]:
             best_weights_before = [os.path.join(args.ckpt_dir, weight_file) for weight_file in os.listdir(args.ckpt_dir) if 'best_' in weight_file]
             for best_weight_before in best_weights_before:
                 os.remove(best_weight_before)
-            torch.save(model.state_dict(), os.path.join(args.ckpt_dir, 'best_ep{}_emax{:.4f}.pth'.format(epoch, e_measures)))
+            torch.save(model.state_dict(), os.path.join(args.ckpt_dir, 'best_ep{}_emax{:.4f}.pth'.format(epoch, measures[0])))
 
 def train(epoch):
     loss_log = AverageMeter()
@@ -262,12 +267,12 @@ def validate(model, test_loaders, testsets):
     model.eval()
 
     testsets = testsets.split('+')
-    e_measures = []
+    measures = []
     for testset in testsets[:1]:
         print('Validating {}...'.format(testset))
         test_loader = test_loaders[testset]
         
-        saved_root = os.path.join('tmp4val', testset)
+        saved_root = os.path.join(args.val_dir, testset)
 
         for batch in test_loader:
             inputs = batch[0].to(device).squeeze(0)
@@ -293,10 +298,10 @@ def validate(model, test_loaders, testsets):
         evaler = Eval_thread(eval_loader, cuda=True)
         # Use E_measure for validation
         e_measure = evaler.Eval_Emeasure().max().item()
-        e_measures.append(e_measure)
+        measures.append(e_measure)
 
     model.train()
-    return e_measures
+    return measures
 
 if __name__ == '__main__':
     main()
