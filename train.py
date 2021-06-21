@@ -15,9 +15,8 @@ import torchvision.utils as vutils
 import torch.nn.functional as F
 import pytorch_toolbelt.losses as PTL
 
-from models.GCoNet import GCoNet
 from config import Config
-from loss import saliency_structure_consistency
+from loss import saliency_structure_consistency, DSLoss
 from util import generate_smoothed_gt
 
 from evaluation.dataloader import EvalDataset
@@ -30,10 +29,6 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 parser = argparse.ArgumentParser(description='')
 parser.add_argument('--model',
                     default='GCoNet',
-                    type=str,
-                    help="Options: '', ''")
-parser.add_argument('--loss',
-                    default='DSLoss_IoU_noCAM',
                     type=str,
                     help="Options: '', ''")
 parser.add_argument('--bs', '--batch_size', default=48, type=int)
@@ -112,9 +107,10 @@ for testset in args.testsets.split('+'):
     )
     test_loaders[testset] = test_loader
 
+config = Config()
 
-if Config().rand_seed:
-    set_seed(Config().rand_seed)
+if config.rand_seed:
+    set_seed(config.rand_seed)
 
 # make dir for ckpt
 os.makedirs(args.ckpt_dir, exist_ok=True)
@@ -125,6 +121,13 @@ logger = Logger(os.path.join(args.ckpt_dir, "log.txt"))
 # Init model
 device = torch.device("cuda")
 
+if args.model == 'baseline':
+    from models.baseline import GCoNet
+    config.loss = ['sal']
+elif args.model == 'GCoNet':
+    from models.GCoNet import GCoNet
+elif args.model == 'GCoNet':
+    from models.GCoNet_ext import GCoNet
 model = GCoNet()
 model = model.to(device)
 
@@ -136,10 +139,10 @@ all_params = [{'params': base_params}, {'params': model.bb.parameters(), 'lr': a
 
 # Setting optimizer
 optimizer = optim.Adam(params=all_params, lr=args.lr, betas=[0.9, 0.99])
-scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=Config().decay_step_size, gamma=0.1)
+scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=config.decay_step_size, gamma=0.1)
 
 # Why freeze the backbone?...
-if Config().freeze:
+if config.freeze:
     for key, value in model.named_parameters():
         if 'bb' in key and 'bb.conv5.conv5_3' not in key:
             value.requires_grad = False
@@ -156,8 +159,7 @@ logger.info("Other hyperparameters:")
 logger.info(args)
 
 # Setting Loss
-exec('from loss import ' + args.loss)
-dsloss = eval(args.loss+'()')
+dsloss = DSLoss()
 
 
 def main():
@@ -192,7 +194,7 @@ def main():
                 'scheduler': scheduler.state_dict(),
             },
             path=args.ckpt_dir)
-        if epoch >= args.epochs - Config().val_last:
+        if epoch >= args.epochs - config.val_last:
             torch.save(model.state_dict(), os.path.join(args.ckpt_dir, 'ep{}.pth'.format(epoch)))
         if np.max(np.array(val_measures)[:, 0].squeeze()) == measures[0]:
             best_weights_before = [os.path.join(args.ckpt_dir, weight_file) for weight_file in os.listdir(args.ckpt_dir) if 'best_' in weight_file]
@@ -202,10 +204,7 @@ def main():
 
 def train(epoch):
     loss_log = AverageMeter()
-
-    # Switch to train mode
     model.train()
-    #CE = torch.nn.BCEWithLogitsLoss()
     FL = PTL.BinaryFocalLoss()
 
     for batch_idx, batch in enumerate(train_loader):
@@ -217,12 +216,13 @@ def train(epoch):
         gts_cat = torch.cat([gts, gts_neg], dim=0)
         scaled_preds, pred_cls, pred_x5 = model(inputs)
         atts = scaled_preds[-1]
+        scaled_preds = scaled_preds[-config.loss_sal_last_layers:]
 
-        if Config().label_smoothing:
+        if config.label_smoothing:
             loss_sal = 0.5 * dsloss(scaled_preds, gts) + dsloss(scaled_preds, generate_smoothed_gt(gts))
         else:
             loss_sal = dsloss(scaled_preds, gts)
-        if Config().self_supervision:
+        if config.self_supervision:
             H, W = inputs.shape[-2:]
             images_scale = F.interpolate(inputs, size=(H//4, W//4), mode='bilinear', align_corners=True)
             sal_scale = model(images_scale)[0][-1]
@@ -230,9 +230,13 @@ def train(epoch):
             loss_ss = saliency_structure_consistency(sal_scale, sal_s)
             loss_sal += loss_ss * 0.3
 
-        loss_cls = F.cross_entropy(pred_cls, cls_gts) * 3.0
-        loss_x5 = FL(pred_x5, gts_cat) * 250.0
-        loss = loss_sal + loss_cls + loss_x5
+        loss = loss_sal
+        if 'cls' in config.loss:
+            loss_cls = F.cross_entropy(pred_cls, cls_gts) * 3.0
+            loss += loss_cls
+        if 'x5' in config.loss:
+            loss_x5 = FL(pred_x5, gts_cat) * 250.0
+            loss += loss_x5
 
         loss_log.update(loss, inputs.size(0))
 
@@ -242,23 +246,17 @@ def train(epoch):
 
         if batch_idx % 20 == 0:
             # NOTE: Top2Down; [0] is the grobal slamap and [5] is the final output
-            logger.info('Epoch[{0}/{1}] Iter[{2}/{3}]  '
-                        'Train Loss: loss_sal: {4:.3f}, loss_cls: {5:.3f}, loss_x5: {6:.3f} '
-                        'Loss_total: {loss.val:.3f} ({loss.avg:.3f})  '.format(
-                            epoch,
-                            args.epochs,
-                            batch_idx,
-                            len(train_loader),
-                            loss_sal,
-                            loss_cls,
-                            loss_x5,
-                            loss=loss_log,
-                        ))
+            logger.info(
+                'Epoch[{0}/{1}] Iter[{2}/{3}]  '
+                'Train Loss: loss_sal: {4:.3f}, loss_cls: {5:.3f}, loss_x5: {6:.3f} '
+                'Loss_total: {loss.val:.3f} ({loss.avg:.3f})  '.format(
+                    epoch, args.epochs,
+                    batch_idx, len(train_loader),
+                    loss_sal, loss_cls, loss_x5,
+                    loss=loss_log,
+                ))
     scheduler.step()
-    logger.info('@==Final== Epoch[{0}/{1}]  '
-                'Train Loss: {loss.avg:.3f}  '.format(epoch,
-                                                      args.epochs,
-                                                      loss=loss_log))
+    logger.info('@==Final== Epoch[{0}/{1}]  Train Loss: {loss.avg:.3f}  '.format(epoch, args.epochs, loss=loss_log))
 
     return loss_log.avg
 

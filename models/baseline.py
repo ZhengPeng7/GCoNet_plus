@@ -60,11 +60,6 @@ class GCoNet(nn.Module):
 
         self.pred_layer = half_DSLayer(512*channel_scale)
 
-        self.co_x5 = CoAttLayer(channel_in=512*channel_scale)
-
-        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.classifier = nn.Linear(512*channel_scale, 291)       # DUTS_class has 291 classes
-
         for layer in [self.classifier]:
             weight_init.c2_msra_fill(layer)
 
@@ -80,21 +75,9 @@ class GCoNet(nn.Module):
         x4 = self.bb.conv4(x3)
         x5 = self.bb.conv5(x4)
 
-        _x5 = self.avgpool(x5)
-        _x5 = _x5.view(_x5.size(0), -1)
-        pred_cls = self.classifier(_x5)
-
-        weighted_x5, neg_x5 = self.co_x5(x5)
-
-        if self.training:
-            ########## contrastive branch #########
-            cat_x5 = torch.cat([weighted_x5, neg_x5], dim=0)
-            pred_x5 = self.pred_layer(cat_x5)
-            pred_x5 = F.interpolate(pred_x5, size=(H, W), mode='bilinear', align_corners=True)
-
         ########## Up-Sample ##########
         preds = []
-        p5 = self.top_layer(weighted_x5)
+        p5 = self.top_layer(x5)
 
         p4 = self._upsample_add(p5, self.latlayer4(x4)) 
         p4 = self.enlayer4(p4)
@@ -116,8 +99,5 @@ class GCoNet(nn.Module):
         _pred = self.dslayer1(p1)
         preds.append(F.interpolate(_pred, size=(H, W), mode='bilinear', align_corners=True))
 
-        if self.training:
-            return preds, pred_cls, pred_x5
-        else:
-            return preds
+        return preds
 

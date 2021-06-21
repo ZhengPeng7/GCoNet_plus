@@ -244,14 +244,6 @@ class GINet(nn.Module):
         return F.interpolate(
             x, size=(H, W), mode='bilinear', align_corners=True) + y
 
-    def _fg_att(self, feat, pred):
-        [_, _, H, W] = feat.size()
-        pred = F.interpolate(pred,
-                             size=(H, W),
-                             mode='bilinear',
-                             align_corners=True)
-        return feat * pred
-
     def forward(self, x):
         if self.mode == 'train':
             preds = self._forward(x)
@@ -274,9 +266,7 @@ class GINet(nn.Module):
         pred_cls = self.classifier(_x5)
 
         weighted_x5, neg_x5 = self.co_x5(x5)
-       
-        cam = torch.mean(weighted_x5, dim=1).unsqueeze(1)
-        # cam = cam.sigmoid()
+
         if self.training:
             ########## contrastive branch #########
             cat_x5 = torch.cat([weighted_x5, neg_x5], dim=0)
@@ -289,12 +279,6 @@ class GINet(nn.Module):
         ########## Up-Sample ##########
         preds = []
         p5 = self.toplayer(weighted_x5)
-        _pred = cam
-        preds.append(
-            F.interpolate(_pred,
-                          size=(H, W),
-                          mode='bilinear',
-                          align_corners=True))
 
         p4 = self._upsample_add(p5, self.latlayer4(x4)) 
         p4 = self.enlayer4(p4)

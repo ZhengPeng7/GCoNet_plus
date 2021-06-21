@@ -1,5 +1,7 @@
 from torch import nn
 import torch
+from config import Config
+
 
 class IoU_loss(torch.nn.Module):
     def __init__(self):
@@ -20,19 +22,19 @@ class IoU_loss(torch.nn.Module):
         #return IoU/b
         return IoU
 
-class DSLoss_IoU_noCAM(nn.Module):
+class DSLoss(nn.Module):
     """
     IoU loss for outputs in [1:] scales.
     """
     def __init__(self):
-        super(DSLoss_IoU_noCAM, self).__init__()
-        self.iou = IoU_loss()
+        super(DSLoss, self).__init__()
+        self.iou = nn.BCELoss()
 
     def forward(self, scaled_preds, gt):
         loss = 0
-        for pred_lvl in scaled_preds[1:]:
+        for pred_lvl in scaled_preds[-4:]:
             loss += self.iou(pred_lvl, gt)
-        return loss
+        return loss * Config().lambda_dsloss
 
 
 def SSIM(x, y):

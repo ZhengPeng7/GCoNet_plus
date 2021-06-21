@@ -1,11 +1,13 @@
 method="gconet"
 
+# Val
+rm -r tmp4val*
+
 # Train
 rm slurm*
 rm -r ckpt
 
 # Eval
-rm -r tmp4val*
 rm -r evaluation/output
 rm -r evaluation/score_sorted.txt
 rm -r evaluation/${method}_*.png
