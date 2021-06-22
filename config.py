@@ -22,11 +22,11 @@ class Config():
         if not self.GAM and 'contrast' in self.loss:
             self.loss.remove('contrast')
         if self.criterion_sal == 'bce':
-            self.lambda_sal = 25.
+            self.lambda_sal = 75.
         elif self.criterion_sal == 'iou':
             self.lambda_sal = 1.
         elif self.criterion_sal == 'mse':
-            self.lambda_sal = 300.
+            self.lambda_sal = 125.
         self.loss_sal_last_layers = 1       # used to be last 4 layers
         self.lambda_sal *= (4 / self.loss_sal_last_layers)
         self.lambda_cls = 3.
