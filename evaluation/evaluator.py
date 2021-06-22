@@ -21,33 +21,11 @@ class Eval_thread():
         self.epoch = epoch.split('ep')[-1]
         self.logfile = os.path.join(output_dir, 'result.txt')
 
-    def run(self):
+    def run(self, AP=False, AUC=False, save_metrics=False):
         Res = {}
         start_time = time.time()
         mae = self.Eval_mae()
         Res['MAE'] = mae
-
-        Fm, prec, recall = self.Eval_fmeasure()
-        max_f = Fm.max().item()
-        mean_f = Fm.mean().item()
-        prec = prec.cpu().numpy()
-        recall = recall.cpu().numpy()
-        avg_p = self.Eval_AP(prec, recall)  # AP
-        Fm = Fm.cpu().numpy()
-        Res['MaxFm'] = max_f
-        Res['MeanFm'] = mean_f
-        Res['AP'] = avg_p
-        Res['Prec'] = prec
-        Res['Recall'] = recall
-        Res['Fm'] = Fm
-
-        auc, TPR, FPR = self.Eval_auc()
-        TPR = TPR.cpu().numpy()
-        FPR = FPR.cpu().numpy()
-
-        Res['AUC'] = auc
-        Res['TPR'] = TPR
-        Res['FPR'] = FPR
 
         Em = self.Eval_Emeasure()
         max_e = Em.max().item()
@@ -60,16 +38,46 @@ class Eval_thread():
         s = self.Eval_Smeasure()
         Res['Sm'] = s
 
-        os.makedirs(os.path.join(self.output_dir, self.method, self.epoch), exist_ok=True)
-        savemat(os.path.join(self.output_dir, self.method, self.epoch, self.dataset + '.mat'), Res)
+        Fm, prec, recall = self.Eval_fmeasure()
+        max_f = Fm.max().item()
+        mean_f = Fm.mean().item()
+        Fm = Fm.cpu().numpy()
+        Res['Fm'] = Fm
 
-        self.LOG(
-            '{} ({}): {:.4f} max-Emeasure ||{:.4f} S-measure  || {:.4f} max-fm || {:.4f} mae || {:.4f} mean-Emeasure || {:.4f} mean-fm || {:.4f} AP || {:.4f} AUC.\n'
-            .format(self.dataset, self.method+'-ep{}'.format(self.epoch), max_e, s, max_f, mae, mean_e, mean_f, avg_p, auc)
+        if AP:
+            Res['MaxFm'] = max_f
+            Res['MeanFm'] = mean_f
+            prec = prec.cpu().numpy()
+            recall = recall.cpu().numpy()
+            avg_p = self.Eval_AP(prec, recall)
+            Res['AP'] = avg_p
+            Res['Prec'] = prec
+            Res['Recall'] = recall
+
+        if AUC:
+            auc, TPR, FPR = self.Eval_auc()
+            TPR = TPR.cpu().numpy()
+            FPR = FPR.cpu().numpy()
+
+            Res['AUC'] = auc
+            Res['TPR'] = TPR
+            Res['FPR'] = FPR
+
+        if save_metrics:
+            os.makedirs(os.path.join(self.output_dir, self.method, self.epoch), exist_ok=True)
+            savemat(os.path.join(self.output_dir, self.method, self.epoch, self.dataset + '.mat'), Res)
+
+        info = '{} ({}): {:.4f} max-Emeasure ||{:.4f} S-measure  || {:.4f} max-fm || {:.4f} mae || {:.4f} mean-Emeasure || {:.4f} mean-fm'.format(
+            self.dataset, self.method+'-ep{}'.format(self.epoch), max_e, s, max_f, mae, mean_e, mean_f
         )
+        if AP:
+            info += ' || {:.4f} AP'.format(avg_p)
+        if AUC:
+            info += ' || {:.4f} AUC'.format(auc)
+        info += '.'
+        self.LOG(info + '\n')
 
-        return '[cost:{:.4f}s] {} ({}): {:.4f} max-Emeasure ||{:.4f} S-measure  || {:.4f} max-fm || {:.4f} mae || {:.4f} mean-Emeasure || {:.4f} mean-fm || {:.4f} AP || {:.4f} AUC.'.format(
-            time.time() - start_time, self.dataset, self.method+'-ep{}'.format(self.epoch), max_e, s, max_f, mae, mean_e, mean_f, avg_p, auc)
+        return '[cost:{:.4f}s] '.format(time.time() - start_time) + info
 
     def Eval_mae(self):
         if self.epoch:
@@ -243,8 +251,7 @@ class Eval_thread():
         for i in range(num):
             y_temp = (y_pred >= thlist[i]).float()
             tp = (y_temp * y).sum()
-            prec[i], recall[i] = tp / (y_temp.sum() + 1e-20), tp / (y.sum() +
-                                                                    1e-20)
+            prec[i], recall[i] = tp / (y_temp.sum() + 1e-20), tp / (y.sum() + 1e-20)
         return prec, recall
 
     def _eval_roc(self, y_pred, y, num):

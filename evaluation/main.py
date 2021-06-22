@@ -210,4 +210,3 @@ if __name__ == "__main__":
     parser.add_argument('--cuda', type=bool, default=True)
     config = parser.parse_args()
     main(config)
-    # main_plot(config)

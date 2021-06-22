@@ -11,8 +11,11 @@ from models.modules import ResBlk, DSLayer, half_DSLayer, CoAttLayer
 from config import Config
 
 
+config = Config()
+
+
 class GCoNet(nn.Module):
-    def __init__(self, bb=Config().bb):
+    def __init__(self, bb=config.bb):
         super(GCoNet, self).__init__()
         if bb == 'vgg16':
             bb_vgg16 = list(vgg16(pretrained=True).children())[0]
@@ -58,15 +61,17 @@ class GCoNet(nn.Module):
         self.dslayer2 = DSLayer()
         self.dslayer1 = DSLayer()
 
-        self.pred_layer = half_DSLayer(512*channel_scale)
+        if config.GAM:
+            self.co_x5 = CoAttLayer(channel_in=512*channel_scale)
 
-        self.co_x5 = CoAttLayer(channel_in=512*channel_scale)
+        if 'contrast' in config.loss:
+            self.pred_layer = half_DSLayer(512*channel_scale)
 
-        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.classifier = nn.Linear(512*channel_scale, 291)       # DUTS_class has 291 classes
-
-        for layer in [self.classifier]:
-            weight_init.c2_msra_fill(layer)
+        if {'cls', 'cls_mask'} & set(config.loss):
+            self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+            self.classifier = nn.Linear(512*channel_scale, 291)       # DUTS_class has 291 classes
+            for layer in [self.classifier]:
+                weight_init.c2_msra_fill(layer)
 
     def _upsample_add(self, x, y):
         [_, _, H, W] = y.size()
@@ -80,44 +85,68 @@ class GCoNet(nn.Module):
         x4 = self.bb.conv4(x3)
         x5 = self.bb.conv5(x4)
 
-        _x5 = self.avgpool(x5)
-        _x5 = _x5.view(_x5.size(0), -1)
-        pred_cls = self.classifier(_x5)
+        if 'cls' in config.loss:
+            _x5 = self.avgpool(x5)
+            _x5 = _x5.view(_x5.size(0), -1)
+            pred_cls = self.classifier(_x5)
 
-        weighted_x5, neg_x5 = self.co_x5(x5)
-
-        if self.training:
-            ########## contrastive branch #########
-            cat_x5 = torch.cat([weighted_x5, neg_x5], dim=0)
-            pred_x5 = self.pred_layer(cat_x5)
-            pred_x5 = F.interpolate(pred_x5, size=(H, W), mode='bilinear', align_corners=True)
+        if config.GAM:
+            weighted_x5, neg_x5 = self.co_x5(x5)
+            if 'contrast' in config.loss:
+                if self.training:
+                    ########## contrastive branch #########
+                    cat_x5 = torch.cat([weighted_x5, neg_x5], dim=0)
+                    pred_contrast = self.pred_layer(cat_x5)
+                    pred_contrast = F.interpolate(pred_contrast, size=(H, W), mode='bilinear', align_corners=True)
+            p5 = self.top_layer(weighted_x5)
+        else:
+            p5 = self.top_layer(x5)
 
         ########## Up-Sample ##########
-        preds = []
-        p5 = self.top_layer(weighted_x5)
 
+        scaled_preds = []
         p4 = self._upsample_add(p5, self.latlayer4(x4)) 
         p4 = self.enlayer4(p4)
         _pred = self.dslayer4(p4)
-        preds.append(F.interpolate(_pred, size=(H, W), mode='bilinear', align_corners=True))
+        scaled_preds.append(F.interpolate(_pred, size=(H, W), mode='bilinear', align_corners=True))
 
         p3 = self._upsample_add(p4, self.latlayer3(x3)) 
         p3 = self.enlayer3(p3)
         _pred = self.dslayer3(p3)
-        preds.append(F.interpolate(_pred, size=(H, W), mode='bilinear', align_corners=True))
+        scaled_preds.append(F.interpolate(_pred, size=(H, W), mode='bilinear', align_corners=True))
 
         p2 = self._upsample_add(p3, self.latlayer2(x2)) 
         p2 = self.enlayer2(p2)
         _pred = self.dslayer2(p2)
-        preds.append(F.interpolate(_pred, size=(H, W), mode='bilinear', align_corners=True))
+        scaled_preds.append(F.interpolate(_pred, size=(H, W), mode='bilinear', align_corners=True))
 
         p1 = self._upsample_add(p2, self.latlayer1(x1)) 
         p1 = self.enlayer1(p1)
         _pred = self.dslayer1(p1)
-        preds.append(F.interpolate(_pred, size=(H, W), mode='bilinear', align_corners=True))
+        _pred = F.interpolate(_pred, size=(H, W), mode='bilinear', align_corners=True)
+        scaled_preds.append(_pred)
+
+        if 'cls_mask' in config.loss:
+            x_mask = x * _pred
+            x_mask = self.bb.conv5(self.bb.conv4(self.bb.conv3(self.bb.conv2(self.bb.conv1(x_mask)))))
+            x_mask = self.avgpool(x_mask)
+            x_mask = x_mask.view(x_mask.size(0), -1)
+            pred_cls_mask = self.classifier(x_mask)
 
         if self.training:
-            return preds, pred_cls, pred_x5
+            if {'sal', 'cls', 'contrast', 'cls_mask'} == set(config.loss):
+                return scaled_preds, pred_cls, pred_contrast, pred_cls_mask
+            elif {'sal', 'cls', 'contrast'} == set(config.loss):
+                return scaled_preds, pred_cls, pred_contrast
+            elif {'sal', 'cls', 'cls_mask'} == set(config.loss):
+                return scaled_preds, pred_cls, pred_cls_mask
+            elif {'sal', 'cls'} == set(config.loss):
+                return scaled_preds, pred_cls
+            elif {'sal', 'contrast'} == set(config.loss):
+                return scaled_preds, pred_contrast
+            elif {'sal', 'cls_mask'} == set(config.loss):
+                return scaled_preds, pred_cls_mask
+            else:
+                return scaled_preds
         else:
-            return preds
-
+            return scaled_preds

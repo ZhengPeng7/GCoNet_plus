@@ -22,8 +22,8 @@ from util import generate_smoothed_gt
 from evaluation.dataloader import EvalDataset
 from evaluation.evaluator import Eval_thread
 
-from PIL import ImageFile
-ImageFile.LOAD_TRUNCATED_IMAGES = True
+from models.GCoNet import GCoNet
+
 
 # Parameter from command line
 parser = argparse.ArgumentParser(description='')
@@ -121,13 +121,6 @@ logger = Logger(os.path.join(args.ckpt_dir, "log.txt"))
 # Init model
 device = torch.device("cuda")
 
-if args.model == 'baseline':
-    from models.baseline import GCoNet
-    config.loss = ['sal']
-elif args.model == 'GCoNet':
-    from models.GCoNet import GCoNet
-elif args.model == 'GCoNet':
-    from models.GCoNet_ext import GCoNet
 model = GCoNet()
 model = model.to(device)
 
@@ -148,7 +141,7 @@ if config.freeze:
             value.requires_grad = False
 
 
-# log model and optimizer pars
+# log model and optimizer params
 logger.info("Model details:")
 logger.info(model)
 logger.info("Optimizer details:")
@@ -181,11 +174,12 @@ def main():
 
     for epoch in range(args.start_epoch, args.epochs):
         train_loss = train(epoch)
-        measures = validate(model, test_loaders, args.testsets)
-        val_measures.append(measures)
-        print('Validation: E_max on CoCA for epoch-{} is {:.4f}. Best epoch is epoch-{} with E_max {:.4f}'.format(
-            epoch, measures[0], np.argmax(np.array(val_measures)[:, 0].squeeze()), np.max(np.array(val_measures)[:, 0]))
-        )
+        if config.validation:
+            measures = validate(model, test_loaders, args.testsets)
+            val_measures.append(measures)
+            print('Validation: E_max on CoCA for epoch-{} is {:.4f}. Best epoch is epoch-{} with E_max {:.4f}'.format(
+                epoch, measures[0], np.argmax(np.array(val_measures)[:, 0].squeeze()), np.max(np.array(val_measures)[:, 0]))
+            )
         # Save checkpoint
         save_checkpoint(
             {
@@ -214,14 +208,27 @@ def train(epoch):
         
         gts_neg = torch.full_like(gts, 0.0)
         gts_cat = torch.cat([gts, gts_neg], dim=0)
-        scaled_preds, pred_cls, pred_x5 = model(inputs)
-        atts = scaled_preds[-1]
-        scaled_preds = scaled_preds[-config.loss_sal_last_layers:]
-
-        if config.label_smoothing:
-            loss_sal = 0.5 * dsloss(scaled_preds, gts) + dsloss(scaled_preds, generate_smoothed_gt(gts))
+        if {'sal', 'cls', 'contrast', 'cls_mask'} == set(config.loss):
+            scaled_preds, pred_cls, pred_contrast, pred_cls_mask = model(inputs)
+        elif {'sal', 'cls', 'contrast'} == set(config.loss):
+            scaled_preds, pred_cls, pred_contrast = model(inputs)
+        elif {'sal', 'cls', 'cls_mask'} == set(config.loss):
+            scaled_preds, pred_cls, pred_cls_mask = model(inputs)
+        elif {'sal', 'cls'} == set(config.loss):
+            scaled_preds, pred_cls = model(inputs)
+        elif {'sal', 'contrast'} == set(config.loss):
+            scaled_preds, pred_contrast = model(inputs)
+        elif {'sal', 'cls_mask'} == set(config.loss):
+            scaled_preds, pred_cls_mask = model(inputs)
         else:
-            loss_sal = dsloss(scaled_preds, gts)
+            scaled_preds = model(inputs)
+        atts = scaled_preds[-1]
+        scaled_preds = scaled_preds[-min(config.loss_sal_last_layers, 4):]
+
+        # Tricks
+        loss_sal = dsloss(scaled_preds, gts)
+        if config.label_smoothing:
+            loss_sal = 0.5 * (loss_sal + dsloss(scaled_preds, generate_smoothed_gt(gts)))
         if config.self_supervision:
             H, W = inputs.shape[-2:]
             images_scale = F.interpolate(inputs, size=(H//4, W//4), mode='bilinear', align_corners=True)
@@ -230,31 +237,37 @@ def train(epoch):
             loss_ss = saliency_structure_consistency(sal_scale, sal_s)
             loss_sal += loss_ss * 0.3
 
+        # Loss
+        loss_sal = loss_sal * config.lambda_sal
         loss = loss_sal
         if 'cls' in config.loss:
-            loss_cls = F.cross_entropy(pred_cls, cls_gts) * 3.0
+            loss_cls = F.cross_entropy(pred_cls, cls_gts) * config.lambda_cls
             loss += loss_cls
-        if 'x5' in config.loss:
-            loss_x5 = FL(pred_x5, gts_cat) * 250.0
-            loss += loss_x5
-
+        if 'contrast' in config.loss:
+            loss_contrast = FL(pred_contrast, gts_cat) * config.lambda_contrast
+            loss += loss_contrast
+        if 'cls_mask' in config.loss:
+            loss_cls_mask = F.cross_entropy(pred_cls_mask, cls_gts) * config.lambda_cls_mask
+            loss += loss_cls_mask
         loss_log.update(loss, inputs.size(0))
 
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
+        # Logger
         if batch_idx % 20 == 0:
             # NOTE: Top2Down; [0] is the grobal slamap and [5] is the final output
-            logger.info(
-                'Epoch[{0}/{1}] Iter[{2}/{3}]  '
-                'Train Loss: loss_sal: {4:.3f}, loss_cls: {5:.3f}, loss_x5: {6:.3f} '
-                'Loss_total: {loss.val:.3f} ({loss.avg:.3f})  '.format(
-                    epoch, args.epochs,
-                    batch_idx, len(train_loader),
-                    loss_sal, loss_cls, loss_x5,
-                    loss=loss_log,
-                ))
+            info_progress = 'Epoch[{0}/{1}] Iter[{2}/{3}]'.format(epoch, args.epochs, batch_idx, len(train_loader))
+            info_loss = 'Train Loss: loss_sal: {:.3f}'.format(loss_sal)
+            if 'cls' in config.loss:
+                info_loss += ', loss_cls: {:.3f}'.format(loss_cls)
+            if 'cls_mask' in config.loss:
+                info_loss += ', loss_cls_mask: {:.3f}'.format(loss_cls_mask)
+            if 'contrast' in config.loss:
+                info_loss += ', loss_contrast: {:.3f}'.format(loss_contrast)
+            info_loss += ', Loss_total: {loss.val:.3f} ({loss.avg:.3f})  '.format(loss=loss_log)
+            logger.info(''.join((info_progress, info_loss)))
     scheduler.step()
     logger.info('@==Final== Epoch[{0}/{1}]  Train Loss: {loss.avg:.3f}  '.format(epoch, args.epochs, loss=loss_log))
 

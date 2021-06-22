@@ -10,16 +10,16 @@ class IoU_loss(torch.nn.Module):
     def forward(self, pred, target):
         b = pred.shape[0]
         IoU = 0.0
-        for i in range(0,b):
-            #compute the IoU of the foreground
-            Iand1 = torch.sum(target[i,:,:,:]*pred[i,:,:,:])
-            Ior1 = torch.sum(target[i,:,:,:]) + torch.sum(pred[i,:,:,:])-Iand1
-            IoU1 = Iand1/Ior1
+        for i in range(0, b):
+            # compute the IoU of the foreground
+            Iand1 = torch.sum(target[i, :, :, :] * pred[i, :, :, :])
+            Ior1 = torch.sum(target[i, :, :, :]) + torch.sum(pred[i, :, :, :]) - Iand1
+            IoU1 = Iand1 / Ior1
 
-            #IoU loss is (1-IoU1)
+            # IoU loss is (1-IoU1)
             IoU = IoU + (1-IoU1)
         
-        #return IoU/b
+        # return IoU/b
         return IoU
 
 class DSLoss(nn.Module):
@@ -28,13 +28,18 @@ class DSLoss(nn.Module):
     """
     def __init__(self):
         super(DSLoss, self).__init__()
-        self.iou = nn.BCELoss()
+        if Config().criterion_sal == 'bce':
+            self.criterion = nn.BCELoss()
+        elif Config().criterion_sal == 'iou':
+            self.criterion = IoU_loss()
+        elif Config().criterion_sal == 'mse':
+            self.criterion = nn.MSELoss()
 
     def forward(self, scaled_preds, gt):
         loss = 0
-        for pred_lvl in scaled_preds[-4:]:
-            loss += self.iou(pred_lvl, gt)
-        return loss * Config().lambda_dsloss
+        for pred_lvl in scaled_preds[:]:
+            loss += self.criterion(pred_lvl, gt)
+        return loss
 
 
 def SSIM(x, y):
