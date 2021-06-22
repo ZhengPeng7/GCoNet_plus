@@ -7,27 +7,27 @@
 # Run python script
 method="gconet_$1"
 size=224
-epochs=30
+epochs=50
 val_last=${epochs}
 
 # Train
 python train.py --trainset DUTS_class --size ${size} --ckpt_dir ckpt/${method} --epochs ${epochs} --val_dir tmp4val_${method}
 
-# Show validation results
-python collect_bests.py
+# # Show validation results
+# python collect_bests.py
 
-# # Test
-# for ((ep=${epochs}-${val_last};ep<${epochs};ep++))
-# do
-# python test.py --pred_dir /home/pz1/datasets/sod/preds/${method}/ep${ep} --ckpt ckpt/${method}/ep${ep}.pth --size ${size}
-# done
+# Test
+for ((ep=${epochs}-${val_last};ep<${epochs};ep++))
+do
+python test.py --pred_dir /home/pz1/datasets/sod/preds/${method}/ep${ep} --ckpt ckpt/${method}/ep${ep}.pth --size ${size}
+done
 
 
-# # Eval
-# cd evaluation
-# python main.py --methods ${method}
-# python sort_results.py
-# cd ..
+# Eval
+cd evaluation
+python main.py --methods ${method}
+python sort_results.py
+cd ..
 
 
 

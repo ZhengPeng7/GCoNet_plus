@@ -190,11 +190,12 @@ def main():
             path=args.ckpt_dir)
         if epoch >= args.epochs - config.val_last:
             torch.save(model.state_dict(), os.path.join(args.ckpt_dir, 'ep{}.pth'.format(epoch)))
-        if np.max(np.array(val_measures)[:, 0].squeeze()) == measures[0]:
-            best_weights_before = [os.path.join(args.ckpt_dir, weight_file) for weight_file in os.listdir(args.ckpt_dir) if 'best_' in weight_file]
-            for best_weight_before in best_weights_before:
-                os.remove(best_weight_before)
-            torch.save(model.state_dict(), os.path.join(args.ckpt_dir, 'best_ep{}_emax{:.4f}.pth'.format(epoch, measures[0])))
+        if config.validation:
+            if np.max(np.array(val_measures)[:, 0].squeeze()) == measures[0]:
+                best_weights_before = [os.path.join(args.ckpt_dir, weight_file) for weight_file in os.listdir(args.ckpt_dir) if 'best_' in weight_file]
+                for best_weight_before in best_weights_before:
+                    os.remove(best_weight_before)
+                torch.save(model.state_dict(), os.path.join(args.ckpt_dir, 'best_ep{}_emax{:.4f}.pth'.format(epoch, measures[0])))
 
 def train(epoch):
     loss_log = AverageMeter()
@@ -238,8 +239,9 @@ def train(epoch):
             loss_sal += loss_ss * 0.3
 
         # Loss
+        loss = 0
         loss_sal = loss_sal * config.lambda_sal
-        loss = loss_sal
+        loss += loss_sal
         if 'cls' in config.loss:
             loss_cls = F.cross_entropy(pred_cls, cls_gts) * config.lambda_cls
             loss += loss_cls
