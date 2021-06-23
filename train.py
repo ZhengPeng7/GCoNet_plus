@@ -210,17 +210,17 @@ def train(epoch):
         gts_neg = torch.full_like(gts, 0.0)
         gts_cat = torch.cat([gts, gts_neg], dim=0)
         if {'sal', 'cls', 'contrast', 'cls_mask'} == set(config.loss):
-            scaled_preds, pred_cls, pred_contrast, pred_cls_mask = model(inputs)
+            scaled_preds, pred_cls, pred_contrast, pred_cls_masks = model(inputs)
         elif {'sal', 'cls', 'contrast'} == set(config.loss):
             scaled_preds, pred_cls, pred_contrast = model(inputs)
         elif {'sal', 'cls', 'cls_mask'} == set(config.loss):
-            scaled_preds, pred_cls, pred_cls_mask = model(inputs)
+            scaled_preds, pred_cls, pred_cls_masks = model(inputs)
         elif {'sal', 'cls'} == set(config.loss):
             scaled_preds, pred_cls = model(inputs)
         elif {'sal', 'contrast'} == set(config.loss):
             scaled_preds, pred_contrast = model(inputs)
         elif {'sal', 'cls_mask'} == set(config.loss):
-            scaled_preds, pred_cls_mask = model(inputs)
+            scaled_preds, pred_cls_masks = model(inputs)
         else:
             scaled_preds = model(inputs)
         atts = scaled_preds[-1]
@@ -249,7 +249,9 @@ def train(epoch):
             loss_contrast = FL(pred_contrast, gts_cat) * config.lambda_contrast
             loss += loss_contrast
         if 'cls_mask' in config.loss:
-            loss_cls_mask = F.cross_entropy(pred_cls_mask, cls_gts) * config.lambda_cls_mask
+            loss_cls_mask = 0
+            for pred_cls_mask in pred_cls_masks:
+                loss_cls_mask += F.cross_entropy(pred_cls_mask, cls_gts) * config.lambda_cls_mask
             loss += loss_cls_mask
         loss_log.update(loss, inputs.size(0))
 

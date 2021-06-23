@@ -21,7 +21,7 @@ class ResBlk(nn.Module):
 
 
 class DSLayer(nn.Module):
-    def __init__(self, channel_in=64, sigmoid=True):
+    def __init__(self, channel_in=64, channel_out=1, activation_out=nn.Sigmoid()):
         super(DSLayer, self).__init__()
         self.enlayer = nn.Sequential(
             nn.Conv2d(channel_in, 64, kernel_size=3, stride=1, padding=1),
@@ -29,10 +29,13 @@ class DSLayer(nn.Module):
             nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1),
             nn.ReLU(inplace=True),
         )
-        self.predlayer = nn.Sequential(
-            nn.Conv2d(64, 1, kernel_size=1, stride=1, padding=0),
-            nn.Sigmoid(),
-        ) if sigmoid else nn.Conv2d(64, 1, kernel_size=1, stride=1, padding=0)
+        if activation_out:
+            self.predlayer = nn.Sequential(
+                nn.Conv2d(64, channel_out, kernel_size=1, stride=1, padding=0),
+                activation_out,
+            )
+        else:
+            self.predlayer = nn.Conv2d(64, channel_out, kernel_size=1, stride=1, padding=0)
 
     def forward(self, x):
         x = self.enlayer(x)

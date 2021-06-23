@@ -56,10 +56,25 @@ class GCoNet(nn.Module):
         self.enlayer2 = ResBlk()
         self.enlayer1 = ResBlk()
 
-        self.dslayer4 = DSLayer()
-        self.dslayer3 = DSLayer()
-        self.dslayer2 = DSLayer()
-        self.dslayer1 = DSLayer()
+        channel_last = 32
+        activation_out = config.activation_out
+        if config.loss_cls_mask_last_layers == 1:
+            self.dslayer4 = DSLayer(channel_out=1, activation_out=nn.Sigmoid())
+            self.dslayer3 = DSLayer(channel_out=1, activation_out=nn.Sigmoid())
+            self.dslayer2 = DSLayer(channel_out=1, activation_out=nn.Sigmoid())
+        elif config.loss_cls_mask_last_layers == 2:
+            self.dslayer4 = DSLayer(channel_out=1, activation_out=nn.Sigmoid())
+            self.dslayer3 = DSLayer(channel_out=1, activation_out=nn.Sigmoid())
+            self.dslayer2 = DSLayer(channel_out=channel_last, activation_out=(nn.ReLU(inplace=True) if activation_out == 'relu' else nn.Sigmoid()))
+        elif config.loss_cls_mask_last_layers == 3:
+            self.dslayer4 = DSLayer(channel_out=1, activation_out=nn.Sigmoid())
+            self.dslayer3 = DSLayer(channel_out=channel_last, activation_out=(nn.ReLU(inplace=True) if activation_out == 'relu' else nn.Sigmoid()))
+            self.dslayer2 = DSLayer(channel_out=channel_last, activation_out=(nn.ReLU(inplace=True) if activation_out == 'relu' else nn.Sigmoid()))
+        elif config.loss_cls_mask_last_layers == 4:
+            self.dslayer4 = DSLayer(channel_out=channel_last, activation_out=(nn.ReLU(inplace=True) if activation_out == 'relu' else nn.Sigmoid()))
+            self.dslayer3 = DSLayer(channel_out=channel_last, activation_out=(nn.ReLU(inplace=True) if activation_out == 'relu' else nn.Sigmoid()))
+            self.dslayer2 = DSLayer(channel_out=channel_last, activation_out=(nn.ReLU(inplace=True) if activation_out == 'relu' else nn.Sigmoid()))
+        self.dslayer1 = DSLayer(channel_out=channel_last, activation_out=(nn.ReLU(inplace=True) if activation_out == 'relu' else nn.Sigmoid()))
 
         if config.GAM:
             self.co_x5 = CoAttLayer(channel_in=512*channel_scale)
@@ -73,12 +88,16 @@ class GCoNet(nn.Module):
             for layer in [self.classifier]:
                 weight_init.c2_msra_fill(layer)
 
+        self.convs_out = []
+        for _ in range(config.loss_cls_mask_last_layers):
+            self.convs_out.append(nn.Sequential(nn.Conv2d(channel_last, 1, 1, 1, 0).cuda(), nn.Sigmoid().cuda()))
+
     def _upsample_add(self, x, y):
         [_, _, H, W] = y.size()
         return F.interpolate(x, size=(H, W), mode='bilinear', align_corners=True) + y
 
     def forward(self, x):
-        [_, _, H, W] = x.size()
+        [N, _, H, W] = x.size()
         x1 = self.bb.conv1(x)
         x2 = self.bb.conv2(x1)
         x3 = self.bb.conv3(x2)
@@ -104,48 +123,64 @@ class GCoNet(nn.Module):
 
         ########## Up-Sample ##########
 
-        scaled_preds = []
         p4 = self._upsample_add(p5, self.latlayer4(x4)) 
         p4 = self.enlayer4(p4)
-        _pred = self.dslayer4(p4)
-        scaled_preds.append(F.interpolate(_pred, size=(H, W), mode='bilinear', align_corners=True))
+        p4_out = F.interpolate(self.dslayer4(p4), size=x3.shape[2:], mode='bilinear', align_corners=True)
 
         p3 = self._upsample_add(p4, self.latlayer3(x3)) 
         p3 = self.enlayer3(p3)
-        _pred = self.dslayer3(p3)
-        scaled_preds.append(F.interpolate(_pred, size=(H, W), mode='bilinear', align_corners=True))
+        p3_out = F.interpolate(self.dslayer3(p3), size=x2.shape[2:], mode='bilinear', align_corners=True)
 
         p2 = self._upsample_add(p3, self.latlayer2(x2)) 
         p2 = self.enlayer2(p2)
-        _pred = self.dslayer2(p2)
-        scaled_preds.append(F.interpolate(_pred, size=(H, W), mode='bilinear', align_corners=True))
+        p2_out = F.interpolate(self.dslayer2(p2), size=x1.shape[2:], mode='bilinear', align_corners=True)
 
         p1 = self._upsample_add(p2, self.latlayer1(x1)) 
         p1 = self.enlayer1(p1)
-        _pred = self.dslayer1(p1)
-        _pred = F.interpolate(_pred, size=(H, W), mode='bilinear', align_corners=True)
-        scaled_preds.append(_pred)
+        p1_out = F.interpolate(self.dslayer1(p1), size=x.shape[2:], mode='bilinear', align_corners=True)
+
+        _preds_may_be_masked = [p4_out, p3_out, p2_out, p1_out]
+        scaled_preds = []
+        for idx_out in range(len(_preds_may_be_masked)):
+            if idx_out < len(_preds_may_be_masked) - config.loss_cls_mask_last_layers:
+                scaled_preds.append(
+                    _preds_may_be_masked[idx_out]
+                )
+            else:
+                scaled_preds.append(
+                    self.convs_out[idx_out - (len(_preds_may_be_masked) - config.loss_cls_mask_last_layers)](
+                        _preds_may_be_masked[idx_out]
+                    )
+                )
 
         if 'cls_mask' in config.loss:
-            x_mask = x * _pred
-            x_mask = self.bb.conv5(self.bb.conv4(self.bb.conv3(self.bb.conv2(self.bb.conv1(x_mask)))))
-            x_mask = self.avgpool(x_mask)
-            x_mask = x_mask.view(x_mask.size(0), -1)
-            pred_cls_mask = self.classifier(x_mask)
+            pred_cls_masks = []
+            input_features = [x, x1, x2, x3][:config.loss_cls_mask_last_layers]
+            bb_lst = [self.bb.conv1, self.bb.conv2, self.bb.conv3, self.bb.conv4, self.bb.conv5]
+            for idx_out in range(config.loss_cls_mask_last_layers):
+                pred_cls_masks.append(
+                    self.classifier(
+                        self.avgpool(
+                            nn.Sequential(*bb_lst[idx_out:])(
+                                input_features[idx_out] * scaled_preds[-(idx_out+1)]
+                            )
+                        ).view(N, -1)
+                    )
+                )
 
         if self.training:
             if {'sal', 'cls', 'contrast', 'cls_mask'} == set(config.loss):
-                return scaled_preds, pred_cls, pred_contrast, pred_cls_mask
+                return scaled_preds, pred_cls, pred_contrast, pred_cls_masks
             elif {'sal', 'cls', 'contrast'} == set(config.loss):
                 return scaled_preds, pred_cls, pred_contrast
             elif {'sal', 'cls', 'cls_mask'} == set(config.loss):
-                return scaled_preds, pred_cls, pred_cls_mask
+                return scaled_preds, pred_cls, pred_cls_masks
             elif {'sal', 'cls'} == set(config.loss):
                 return scaled_preds, pred_cls
             elif {'sal', 'contrast'} == set(config.loss):
                 return scaled_preds, pred_contrast
             elif {'sal', 'cls_mask'} == set(config.loss):
-                return scaled_preds, pred_cls_mask
+                return scaled_preds, pred_cls_masks
             else:
                 return scaled_preds
         else:

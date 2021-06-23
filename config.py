@@ -22,17 +22,21 @@ class Config():
         if not self.GAM and 'contrast' in self.loss:
             self.loss.remove('contrast')
         if self.criterion_sal == 'bce':
-            self.lambda_sal = 75.
+            self.lambda_sal = 25.
         elif self.criterion_sal == 'iou':
             self.lambda_sal = 1.
         elif self.criterion_sal == 'mse':
             self.lambda_sal = 125.
-        self.loss_sal_last_layers = 1       # used to be last 4 layers
-        self.lambda_sal *= (4 / self.loss_sal_last_layers)
+        self.loss_sal_last_layers = 4       # used to be last 4 layers
+        self.loss_cls_mask_last_layers = 4       # used to be last 4 layers
+        self.loss_sal_ratio_by_last_layers = 4 / self.loss_sal_last_layers
+        self.loss_cls_mask_ratio_by_last_layers = 4 / self.loss_cls_mask_last_layers
+        self.lambda_sal *= self.loss_sal_ratio_by_last_layers
         self.lambda_cls = 3.
         self.lambda_contrast = 250.
-        self.lambda_cls_mask = 10.
+        self.lambda_cls_mask = 2.5 * self.loss_cls_mask_ratio_by_last_layers
+
+        self.activation_out = 'relu'
 
         self.decay_step_size = 300
-
         self.val_last = 50
