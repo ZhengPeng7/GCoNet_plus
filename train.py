@@ -310,7 +310,7 @@ def validate(model, test_loaders, testsets):
         )
         evaler = Eval_thread(eval_loader, cuda=True)
         # Use E_measure for validation
-        e_measure = evaler.Eval_Emeasure().max().item()
+        e_measure = evaler.Eval_Smeasure()
         measures.append(e_measure)
 
     model.train()

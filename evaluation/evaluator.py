@@ -20,54 +20,76 @@ class Eval_thread():
         self.output_dir = output_dir
         self.epoch = epoch.split('ep')[-1]
         self.logfile = os.path.join(output_dir, 'result.txt')
+        self.dataset2smeasure_bottom_bound = {'CoCA': 0.670, 'CoSOD3k': 0.802, 'CoSal2015': 0.845}
 
-    def run(self, AP=False, AUC=False, save_metrics=False):
+    def run(self, AP=False, AUC=False, save_metrics=False, eval_all_measures=True):
+        os.makedirs(os.path.join(self.output_dir, self.method, self.epoch), exist_ok=True)
         Res = {}
         start_time = time.time()
-        mae = self.Eval_mae()
-        Res['MAE'] = mae
-
-        Em = self.Eval_Emeasure()
-        max_e = Em.max().item()
-        mean_e = Em.mean().item()
-        Em = Em.cpu().numpy()
-        Res['MaxEm'] = max_e
-        Res['MeanEm'] = mean_e
-        Res['Em'] = Em
 
         s = self.Eval_Smeasure()
-        Res['Sm'] = s
 
-        Fm, prec, recall = self.Eval_fmeasure()
-        max_f = Fm.max().item()
-        mean_f = Fm.mean().item()
-        Fm = Fm.cpu().numpy()
-        Res['Fm'] = Fm
+        if s > self.dataset2smeasure_bottom_bound[self.dataset] and eval_all_measures:
+            mae = self.Eval_mae()
+            Em = self.Eval_Emeasure()
+            max_e = Em.max().item()
+            mean_e = Em.mean().item()
+            Em = Em.cpu().numpy()
+            Fm, prec, recall = self.Eval_fmeasure()
+            max_f = Fm.max().item()
+            mean_f = Fm.mean().item()
+            Fm = Fm.cpu().numpy()
+        else:
+            mae = 1
+            Em = torch.zeros(255).cpu().numpy()
+            max_e = 0
+            mean_e = 0
+            Fm, prec, recall = 0, 0, 0
+            max_f = 0
+            mean_f = 0
+            eval_all_measures = False
 
         if AP:
-            Res['MaxFm'] = max_f
-            Res['MeanFm'] = mean_f
             prec = prec.cpu().numpy()
             recall = recall.cpu().numpy()
             avg_p = self.Eval_AP(prec, recall)
-            Res['AP'] = avg_p
-            Res['Prec'] = prec
-            Res['Recall'] = recall
 
         if AUC:
             auc, TPR, FPR = self.Eval_auc()
             TPR = TPR.cpu().numpy()
             FPR = FPR.cpu().numpy()
 
-            Res['AUC'] = auc
-            Res['TPR'] = TPR
-            Res['FPR'] = FPR
-
         if save_metrics:
+            Res['Sm'] = s
+            if s > self.dataset2smeasure_bottom_bound[self.dataset]:
+                Res['MAE'] = mae
+                Res['MaxEm'] = max_e
+                Res['MeanEm'] = mean_e
+                Res['Em'] = Em
+                Res['Fm'] = Fm
+            else:
+                Res['MAE'] = 1
+                Res['MaxEm'] = 0
+                Res['MeanEm'] = 0
+                Res['Em'] = torch.zeros(255).cpu().numpy()
+                Res['Fm'] = 0
+
+            if AP:
+                Res['MaxFm'] = max_f
+                Res['MeanFm'] = mean_f
+                Res['AP'] = avg_p
+                Res['Prec'] = prec
+                Res['Recall'] = recall
+
+            if AUC:
+                Res['AUC'] = auc
+                Res['TPR'] = TPR
+                Res['FPR'] = FPR
+
             os.makedirs(os.path.join(self.output_dir, self.method, self.epoch), exist_ok=True)
             savemat(os.path.join(self.output_dir, self.method, self.epoch, self.dataset + '.mat'), Res)
 
-        info = '{} ({}): {:.4f} max-Emeasure ||{:.4f} S-measure  || {:.4f} max-fm || {:.4f} mae || {:.4f} mean-Emeasure || {:.4f} mean-fm'.format(
+        info = '{} ({}): {:.4f} max-Emeasure || {:.4f} S-measure  || {:.4f} max-fm || {:.4f} mae || {:.4f} mean-Emeasure || {:.4f} mean-fm'.format(
             self.dataset, self.method+'-ep{}'.format(self.epoch), max_e, s, max_f, mae, mean_e, mean_f
         )
         if AP:
@@ -77,7 +99,7 @@ class Eval_thread():
         info += '.'
         self.LOG(info + '\n')
 
-        return '[cost:{:.4f}s] '.format(time.time() - start_time) + info
+        return '[cost:{:.4f}s] '.format(time.time() - start_time) + info, eval_all_measures
 
     def Eval_mae(self):
         if self.epoch:

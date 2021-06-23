@@ -185,6 +185,7 @@ def main(cfg):
     for method in method_names:
         epochs = os.listdir(os.path.join(cfg.pred_dir, method))[-num_model_eval:][::-1]
         for epoch in epochs:
+            eval_all_measures = True
             for dataset in dataset_names:
                 loader = EvalDataset(
                     os.path.join(cfg.pred_dir, method, epoch, dataset),        # preds
@@ -192,9 +193,8 @@ def main(cfg):
                 )
                 print('Evaluating predictions from {}'.format(os.path.join(cfg.pred_dir, method, epoch, dataset)))
                 thread = Eval_thread(loader, method, dataset, cfg.output_dir, epoch, cfg.cuda)
-                threads.append(thread)
-    for thread in threads:
-        print(thread.run())
+                info, eval_all_measures = thread.run(eval_all_measures=eval_all_measures)
+                print(info)
 
 
 if __name__ == "__main__":
