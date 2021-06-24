@@ -177,7 +177,7 @@ def main():
         if config.validation:
             measures = validate(model, test_loaders, args.testsets)
             val_measures.append(measures)
-            print('Validation: E_max on CoCA for epoch-{} is {:.4f}. Best epoch is epoch-{} with E_max {:.4f}'.format(
+            print('Validation: S_measure on CoCA for epoch-{} is {:.4f}. Best epoch is epoch-{} with S_measure {:.4f}'.format(
                 epoch, measures[0], np.argmax(np.array(val_measures)[:, 0].squeeze()), np.max(np.array(val_measures)[:, 0]))
             )
         # Save checkpoint
@@ -195,7 +195,7 @@ def main():
                 best_weights_before = [os.path.join(args.ckpt_dir, weight_file) for weight_file in os.listdir(args.ckpt_dir) if 'best_' in weight_file]
                 for best_weight_before in best_weights_before:
                     os.remove(best_weight_before)
-                torch.save(model.state_dict(), os.path.join(args.ckpt_dir, 'best_ep{}_emax{:.4f}.pth'.format(epoch, measures[0])))
+                torch.save(model.state_dict(), os.path.join(args.ckpt_dir, 'best_ep{}_Smeasure{:.4f}.pth'.format(epoch, measures[0])))
 
 def train(epoch):
     loss_log = AverageMeter()
@@ -311,9 +311,14 @@ def validate(model, test_loaders, testsets):
             os.path.join('/home/pz1/datasets/sod/gts', testset)                     # GT
         )
         evaler = Eval_thread(eval_loader, cuda=True)
-        # Use E_measure for validation
-        e_measure = evaler.Eval_Smeasure()
-        measures.append(e_measure)
+        # Use S_measure for validation
+        s_measure = evaler.Eval_Smeasure()
+        if s_measure > config.measures['Smeasure']['CoCA'] and 0:
+            # TODO: evluate others measures if s_measure is very high.
+            e_max = evaler.Eval_Emeasure().max().item()
+            f_max = evaler.Eval_fmeasure().max().item()
+            print('Emax: {:4.f}, Fmax: {:4.f}'.format(e_max, f_max))
+        measures.append(s_measure)
 
     model.train()
     return measures

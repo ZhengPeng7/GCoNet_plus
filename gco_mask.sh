@@ -19,7 +19,9 @@ python train.py --trainset DUTS_class --size ${size} --ckpt_dir ckpt/${method} -
 # # Test
 # for ((ep=${epochs}-${val_last};ep<${epochs};ep++))
 # do
-# python test.py --pred_dir /home/pz1/datasets/sod/preds/${method}/ep${ep} --ckpt ckpt/${method}/ep${ep}.pth --size ${size}
+# pred_dir=/home/pz1/datasets/sod/preds/${method}/ep${ep}
+# rm -rf ${pred_dir}
+# python test.py --pred_dir ${pred_dir} --ckpt ckpt/${method}/ep${ep}.pth --size ${size}
 # done
 
 

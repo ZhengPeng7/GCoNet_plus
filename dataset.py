@@ -34,13 +34,17 @@ class CoData(data.Dataset):
             transforms.Resize(self.data_size),
             transforms.ToTensor(),
         ])
-        self.load_all = True
+        self.load_all = False
 
     def __getitem__(self, item):
         names = os.listdir(self.image_dirs[item])
         num = len(names)
         image_paths = list(map(lambda x: os.path.join(self.image_dirs[item], x), names))
         label_paths = list(map(lambda x: os.path.join(self.label_dirs[item], x[:-4]+'.png'), names))
+        # path2image, path2label = {}, {}
+        # for image_path, label_path in zip(image_paths, label_paths):
+        #     path2image[image_path] = Image.open(image_path).convert('RGB')
+        #     path2label[label_path] = Image.open(label_path).convert('L')
 
         if self.is_train:
             # random pick one category
@@ -77,8 +81,8 @@ class CoData(data.Dataset):
         for idx in range(final_num):
             if self.load_all:
                 # TODO
-                image = Image.open(image_paths[idx]).convert('RGB')
-                label = Image.open(label_paths[idx]).convert('L')
+                image = self.images_loaded[idx]
+                label = self.labels_loaded[idx]
             else:
                 image = Image.open(image_paths[idx]).convert('RGB')
                 label = Image.open(label_paths[idx]).convert('L')
