@@ -40,8 +40,6 @@ class GCoNet(nn.Module):
         self.bb = nn.Sequential(bb_convs)
         lateral_channels_in = [512, 512, 256, 128, 64] if 'vgg16' in bb else [2048, 1024, 512, 256, 64]
 
-        # channel_scale_latlayer = channel_scale // 2 if bb == 'resnet50' else 1
-        # channel_last = 32
 
         ch_decoder = lateral_channels_in[0]//2//channel_scale
         self.top_layer = ResBlk(lateral_channels_in[0], ch_decoder)
