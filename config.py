@@ -8,7 +8,7 @@ class Config():
         self.label_smoothing = False
         self.freeze = True
 
-        self.validation = True
+        self.validation = False
 
         # Components
         # GAM
@@ -28,9 +28,11 @@ class Config():
         elif self.criterion_sal == 'mse':
             self.lambda_sal = 125.
 
-        self.loss_sal_last_layers = 1       # used to be last 4 layers
-        self.loss_cls_mask_last_layers = 4       # used to be last 4 layers
-        self.activation_out = 'sigmoid'
+        self.output_number = 1
+        self.loss_sal_last_layers = min(self.output_number, 1)              # used to be last 4 layers
+        self.loss_cls_mask_last_layers = min(self.output_number, 4)         # used to be last 4 layers
+        self.conv_after_itp = True
+        self.complex_lateral_connection = True
 
         self.loss_sal_ratio_by_last_layers = 4 / self.loss_sal_last_layers
         self.loss_cls_mask_ratio_by_last_layers = 4 / self.loss_cls_mask_last_layers
@@ -47,4 +49,4 @@ class Config():
         }
 
         self.decay_step_size = 300
-        self.val_last = 50
+        self.val_last = 30

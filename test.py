@@ -62,7 +62,7 @@ def main(args):
             for inum in range(num):
                 subpath = subpaths[inum][0]
                 ori_size = (ori_sizes[inum][0].item(), ori_sizes[inum][1].item())
-                res = nn.functional.interpolate(scaled_preds[inum].unsqueeze(0), size=ori_size, mode='bilinear', align_corners=True)
+                res = nn.functional.interpolate(scaled_preds[inum].unsqueeze(0), size=ori_size, mode='bilinear', align_corners=True).sigmoid()
                 save_tensor_img(res, os.path.join(saved_root, subpath))
 
 

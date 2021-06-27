@@ -40,7 +40,7 @@ class DSLoss(nn.Module):
         for pred_lvl in scaled_preds[:]:
             if pred_lvl.shape != gt.shape:
                 pred_lvl = nn.functional.interpolate(pred_lvl, size=gt.shape[2:], mode='bilinear', align_corners=True)
-            loss += self.criterion(pred_lvl, gt)
+            loss += self.criterion(pred_lvl.sigmoid(), gt)
         return loss
 
 

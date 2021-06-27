@@ -38,65 +38,60 @@ class GCoNet(nn.Module):
             })
             channel_scale = 4
         self.bb = nn.Sequential(bb_convs)
+        lateral_channels_in = [512, 512, 256, 128, 64] if 'vgg16' in bb else [2048, 1024, 512, 256, 64]
 
-        self.top_layer = nn.Sequential(
-            nn.Conv2d(512*channel_scale, 64, kernel_size=1, stride=1, padding=0),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(64, 64, kernel_size=1, stride=1, padding=0)
-        )
+        # channel_scale_latlayer = channel_scale // 2 if bb == 'resnet50' else 1
+        # channel_last = 32
 
-        channel_scale_latlayer = channel_scale // 2 if bb == 'resnet50' else 1
-        self.latlayer4 = ResBlk(channel_in=512*channel_scale_latlayer)
-        self.latlayer3 = ResBlk(channel_in=256*channel_scale_latlayer)
-        self.latlayer2 = ResBlk(channel_in=128*channel_scale_latlayer)
-        self.latlayer1 = ResBlk(channel_in=64*1)
+        ch_decoder = lateral_channels_in[0]//2//channel_scale
+        self.top_layer = ResBlk(lateral_channels_in[0], ch_decoder)
+        self.enlayer5 = ResBlk(ch_decoder, ch_decoder)
+        if config.conv_after_itp:
+            self.dslayer5 = DSLayer(ch_decoder, ch_decoder)
+        self.latlayer5 = ResBlk(lateral_channels_in[1], ch_decoder) if config.complex_lateral_connection else nn.Conv2d(lateral_channels_in[1], ch_decoder, 1, 1, 0)
 
-        self.enlayer4 = ResBlk()
-        self.enlayer3 = ResBlk()
-        self.enlayer2 = ResBlk()
-        self.enlayer1 = ResBlk()
+        ch_decoder //= 2
+        self.enlayer4 = ResBlk(ch_decoder*2, ch_decoder)
+        if config.conv_after_itp:
+            self.dslayer4 = DSLayer(ch_decoder, ch_decoder)
+        self.latlayer4 = ResBlk(lateral_channels_in[2], ch_decoder) if config.complex_lateral_connection else nn.Conv2d(lateral_channels_in[2], ch_decoder, 1, 1, 0)
+        if config.output_number >= 4:
+            self.conv_out4 = nn.Sequential(nn.Conv2d(ch_decoder, 32, 1, 1, 0), nn.ReLU(inplace=True), nn.Conv2d(32, 1, 1, 1, 0))
 
-        channel_last = 32
-        activation_out = config.activation_out
-        if config.loss_cls_mask_last_layers == 1:
-            self.dslayer4 = DSLayer(channel_out=1, activation_out=nn.Sigmoid())
-            self.dslayer3 = DSLayer(channel_out=1, activation_out=nn.Sigmoid())
-            self.dslayer2 = DSLayer(channel_out=1, activation_out=nn.Sigmoid())
-        elif config.loss_cls_mask_last_layers == 2:
-            self.dslayer4 = DSLayer(channel_out=1, activation_out=nn.Sigmoid())
-            self.dslayer3 = DSLayer(channel_out=1, activation_out=nn.Sigmoid())
-            self.dslayer2 = DSLayer(channel_out=channel_last, activation_out=(nn.ReLU(inplace=True) if activation_out == 'relu' else nn.Sigmoid()))
-        elif config.loss_cls_mask_last_layers == 3:
-            self.dslayer4 = DSLayer(channel_out=1, activation_out=nn.Sigmoid())
-            self.dslayer3 = DSLayer(channel_out=channel_last, activation_out=(nn.ReLU(inplace=True) if activation_out == 'relu' else nn.Sigmoid()))
-            self.dslayer2 = DSLayer(channel_out=channel_last, activation_out=(nn.ReLU(inplace=True) if activation_out == 'relu' else nn.Sigmoid()))
-        elif config.loss_cls_mask_last_layers == 4:
-            self.dslayer4 = DSLayer(channel_out=channel_last, activation_out=(nn.ReLU(inplace=True) if activation_out == 'relu' else nn.Sigmoid()))
-            self.dslayer3 = DSLayer(channel_out=channel_last, activation_out=(nn.ReLU(inplace=True) if activation_out == 'relu' else nn.Sigmoid()))
-            self.dslayer2 = DSLayer(channel_out=channel_last, activation_out=(nn.ReLU(inplace=True) if activation_out == 'relu' else nn.Sigmoid()))
-        self.dslayer1 = DSLayer(channel_out=channel_last, activation_out=(nn.ReLU(inplace=True) if activation_out == 'relu' else nn.Sigmoid()))
+        ch_decoder //= 2
+        self.enlayer3 = ResBlk(ch_decoder*2, ch_decoder)
+        if config.conv_after_itp:
+            self.dslayer3 = DSLayer(ch_decoder, ch_decoder)
+        self.latlayer3 = ResBlk(lateral_channels_in[3], ch_decoder) if config.complex_lateral_connection else nn.Conv2d(lateral_channels_in[3], ch_decoder, 1, 1, 0)
+        if config.output_number >= 3:
+            self.conv_out3 = nn.Sequential(nn.Conv2d(ch_decoder, 32, 1, 1, 0), nn.ReLU(inplace=True), nn.Conv2d(32, 1, 1, 1, 0))
+
+        ch_decoder //= 2
+        self.enlayer2 = ResBlk(ch_decoder*2, ch_decoder)
+        if config.conv_after_itp:
+            self.dslayer2 = DSLayer(ch_decoder, ch_decoder)
+        self.latlayer2 = ResBlk(lateral_channels_in[4], ch_decoder) if config.complex_lateral_connection else nn.Conv2d(lateral_channels_in[4], ch_decoder, 1, 1, 0)
+        if config.output_number >= 2:
+            self.conv_out2 = nn.Sequential(nn.Conv2d(ch_decoder, 32, 1, 1, 0), nn.ReLU(inplace=True), nn.Conv2d(32, 1, 1, 1, 0))
+
+        self.enlayer1 = ResBlk(ch_decoder, ch_decoder)
+        self.conv_out1 = nn.Sequential(nn.Conv2d(ch_decoder, 1, 1, 1, 0))
 
         if config.GAM:
-            self.co_x5 = CoAttLayer(channel_in=512*channel_scale)
+            self.co_x5 = CoAttLayer(channel_in=lateral_channels_in[0])
 
         if 'contrast' in config.loss:
-            self.pred_layer = half_DSLayer(512*channel_scale)
+            self.pred_layer = half_DSLayer(lateral_channels_in[0])
 
         if {'cls', 'cls_mask'} & set(config.loss):
             self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-            self.classifier = nn.Linear(512*channel_scale, 291)       # DUTS_class has 291 classes
+            self.classifier = nn.Linear(lateral_channels_in[0], 291)       # DUTS_class has 291 classes
             for layer in [self.classifier]:
                 weight_init.c2_msra_fill(layer)
 
-        self.convs_out = []
-        for _ in range(config.loss_cls_mask_last_layers):
-            self.convs_out.append(nn.Sequential(nn.Conv2d(channel_last, 1, 1, 1, 0).cuda(), nn.Sigmoid().cuda()))
-
-    def _upsample_add(self, x, y):
-        [_, _, H, W] = y.size()
-        return F.interpolate(x, size=(H, W), mode='bilinear', align_corners=True) + y
-
     def forward(self, x):
+        ########## Encoder ##########
+
         [N, _, H, W] = x.size()
         x1 = self.bb.conv1(x)
         x2 = self.bb.conv2(x1)
@@ -121,37 +116,45 @@ class GCoNet(nn.Module):
         else:
             p5 = self.top_layer(x5)
 
-        ########## Up-Sample ##########
-
-        p4 = self._upsample_add(p5, self.latlayer4(x4)) 
-        p4 = self.enlayer4(p4)
-        p4_out = F.interpolate(self.dslayer4(p4), size=x3.shape[2:], mode='bilinear', align_corners=True)
-
-        p3 = self._upsample_add(p4, self.latlayer3(x3)) 
-        p3 = self.enlayer3(p3)
-        p3_out = F.interpolate(self.dslayer3(p3), size=x2.shape[2:], mode='bilinear', align_corners=True)
-
-        p2 = self._upsample_add(p3, self.latlayer2(x2)) 
-        p2 = self.enlayer2(p2)
-        p2_out = F.interpolate(self.dslayer2(p2), size=x1.shape[2:], mode='bilinear', align_corners=True)
-
-        p1 = self._upsample_add(p2, self.latlayer1(x1)) 
-        p1 = self.enlayer1(p1)
-        p1_out = F.interpolate(self.dslayer1(p1), size=x.shape[2:], mode='bilinear', align_corners=True)
-
-        _preds_may_be_masked = [p4_out, p3_out, p2_out, p1_out]
+        ########## Decoder ##########
         scaled_preds = []
-        for idx_out in range(len(_preds_may_be_masked)):
-            if idx_out < len(_preds_may_be_masked) - config.loss_cls_mask_last_layers:
-                scaled_preds.append(
-                    _preds_may_be_masked[idx_out]
-                )
-            else:
-                scaled_preds.append(
-                    self.convs_out[idx_out - (len(_preds_may_be_masked) - config.loss_cls_mask_last_layers)](
-                        _preds_may_be_masked[idx_out]
-                    )
-                )
+        p5 = self.enlayer5(p5)
+        p5 = F.interpolate(p5, size=x4.shape[2:], mode='bilinear', align_corners=True)
+        if config.conv_after_itp:
+            p5 = self.dslayer5(p5)
+        p4 = p5 + self.latlayer5(x4)
+
+        p4 = self.enlayer4(p4)
+        p4 = F.interpolate(p4, size=x3.shape[2:], mode='bilinear', align_corners=True)
+        if config.conv_after_itp:
+            p4 = self.dslayer4(p4)
+        if config.output_number >= 4:
+            p4_out = self.conv_out4(p4)
+            scaled_preds.append(p4_out)
+        p3 = p4 + self.latlayer4(x3)
+
+        p3 = self.enlayer3(p3)
+        p3 = F.interpolate(p3, size=x2.shape[2:], mode='bilinear', align_corners=True)
+        if config.conv_after_itp:
+            p3 = self.dslayer3(p3)
+        if config.output_number >= 3:
+            p3_out = self.conv_out3(p3)
+            scaled_preds.append(p3_out)
+        p2 = p3 + self.latlayer3(x2)
+
+        p2 = self.enlayer2(p2)
+        p2 = F.interpolate(p2, size=x1.shape[2:], mode='bilinear', align_corners=True)
+        if config.conv_after_itp:
+            p2 = self.dslayer2(p2)
+        if config.output_number >= 2:
+            p2_out = self.conv_out2(p2)
+            scaled_preds.append(p2_out)
+        p1 = p2 + self.latlayer2(x1)
+
+        p1 = self.enlayer1(p1)
+        p1 = F.interpolate(p1, size=x.shape[2:], mode='bilinear', align_corners=True)
+        p1_out = self.conv_out1(p1)
+        scaled_preds.append(p1_out)
 
         if 'cls_mask' in config.loss:
             pred_cls_masks = []

@@ -31,10 +31,10 @@ parser.add_argument('--model',
                     default='GCoNet',
                     type=str,
                     help="Options: '', ''")
-parser.add_argument('--bs', '--batch_size', default=48, type=int)
+parser.add_argument('--bs', '--batch_size', default=32, type=int)
 parser.add_argument('--lr',
                     '--learning_rate',
-                    default=3e-4,
+                    default=2e-4,
                     type=float,
                     help='Initial learning rate')
 parser.add_argument('--resume',
@@ -223,7 +223,6 @@ def train(epoch):
             scaled_preds, pred_cls_masks = model(inputs)
         else:
             scaled_preds = model(inputs)
-        atts = scaled_preds[-1]
         scaled_preds = scaled_preds[-min(config.loss_sal_last_layers, 4):]
 
         # Tricks
@@ -234,8 +233,9 @@ def train(epoch):
             H, W = inputs.shape[-2:]
             images_scale = F.interpolate(inputs, size=(H//4, W//4), mode='bilinear', align_corners=True)
             sal_scale = model(images_scale)[0][-1]
+            atts = scaled_preds[-1]
             sal_s = F.interpolate(atts, size=(H//4, W//4), mode='bilinear', align_corners=True)
-            loss_ss = saliency_structure_consistency(sal_scale, sal_s)
+            loss_ss = saliency_structure_consistency(sal_scale.sigmoid(), sal_s.sigmoid())
             loss_sal += loss_ss * 0.3
 
         # Loss
@@ -303,7 +303,7 @@ def validate(model, test_loaders, testsets):
             for inum in range(num):
                 subpath = subpaths[inum][0]
                 ori_size = (ori_sizes[inum][0].item(), ori_sizes[inum][1].item())
-                res = nn.functional.interpolate(scaled_preds[inum].unsqueeze(0), size=ori_size, mode='bilinear', align_corners=True)
+                res = nn.functional.interpolate(scaled_preds[inum].unsqueeze(0), size=ori_size, mode='bilinear', align_corners=True).sigmoid()
                 save_tensor_img(res, os.path.join(saved_root, subpath))
 
         eval_loader = EvalDataset(

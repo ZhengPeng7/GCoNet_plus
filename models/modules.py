@@ -7,39 +7,65 @@ import fvcore.nn.weight_init as weight_init
 from config import Config
 
 
+config = Config()
+
+
 class ResBlk(nn.Module):
     def __init__(self, channel_in=64, channel_out=64):
         super(ResBlk, self).__init__()
         self.conv_in = nn.Conv2d(channel_in, 64, 3, 1, 1)
         self.relu_in = nn.ReLU(inplace=True)
         self.conv_out = nn.Conv2d(64, channel_out, 3, 1, 1)
+        if 'resnet' in config.bb:
+            self.bn_in = nn.BatchNorm2d(64)
+            self.bn_out = nn.BatchNorm2d(channel_out)
 
     def forward(self, x):
-        x = self.relu_in(self.conv_in(x))
+        x = self.conv_in(x)
+        if 'resnet' in config.bb:
+            x = self.bn_in(x)
+        x = self.relu_in(x)
         x = self.conv_out(x)
+        if 'resnet' in config.bb:
+            x = self.bn_out(x)
         return x
 
 
 class DSLayer(nn.Module):
-    def __init__(self, channel_in=64, channel_out=1, activation_out=nn.Sigmoid()):
+    def __init__(self, channel_in=64, channel_out=1, activation_out='relu'):
         super(DSLayer, self).__init__()
-        self.enlayer = nn.Sequential(
-            nn.Conv2d(channel_in, 64, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(inplace=True),
-        )
+        self.activation_out = activation_out
+        self.conv1 = nn.Conv2d(channel_in, 64, kernel_size=3, stride=1, padding=1)
+        self.relu1 = nn.ReLU(inplace=True)
+
+        self.conv2 = nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1)
+        self.relu2 = nn.ReLU(inplace=True)
         if activation_out:
-            self.predlayer = nn.Sequential(
-                nn.Conv2d(64, channel_out, kernel_size=1, stride=1, padding=0),
-                activation_out,
-            )
+            self.pred_conv = nn.Conv2d(64, channel_out, kernel_size=1, stride=1, padding=0)
+            self.pred_relu = nn.ReLU(inplace=True)
         else:
-            self.predlayer = nn.Conv2d(64, channel_out, kernel_size=1, stride=1, padding=0)
+            self.pred_conv = nn.Conv2d(64, channel_out, kernel_size=1, stride=1, padding=0)
+
+        if 'resnet' in config.bb:
+            self.bn1 = nn.BatchNorm2d(64)
+            self.bn2 = nn.BatchNorm2d(64)
+            self.pred_bn = nn.BatchNorm2d(channel_out)
 
     def forward(self, x):
-        x = self.enlayer(x)
-        x = self.predlayer(x)
+        x = self.conv1(x)
+        if 'resnet' in config.bb:
+            x = self.bn1(x)
+        x = self.relu1(x)
+        x = self.conv2(x)
+        if 'resnet' in config.bb:
+            x = self.bn2(x)
+        x = self.relu2(x)
+
+        x = self.pred_conv(x)
+        if 'resnet' in config.bb:
+            x = self.pred_bn(x)
+        if self.activation_out:
+            x = self.pred_relu(x)
         return x
 
 
