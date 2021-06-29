@@ -31,8 +31,8 @@ class Config():
         self.output_number = 1
         self.loss_sal_last_layers = min(self.output_number, 1)              # used to be last 4 layers
         self.loss_cls_mask_last_layers = min(self.output_number, 4)         # used to be last 4 layers
-        self.conv_after_itp = True
-        self.complex_lateral_connection = True
+        self.conv_after_itp = False
+        self.complex_lateral_connection = False
 
         self.loss_sal_ratio_by_last_layers = 4 / self.loss_sal_last_layers
         self.loss_cls_mask_ratio_by_last_layers = 4 / self.loss_cls_mask_last_layers

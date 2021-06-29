@@ -2,7 +2,7 @@ from collections import OrderedDict
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torchvision.models import vgg16
+from torchvision.models import vgg16, vgg16_bn
 import fvcore.nn.weight_init as weight_init
 from torchvision.models import resnet50
 
@@ -40,6 +40,8 @@ class GCoNet(nn.Module):
         self.bb = nn.Sequential(bb_convs)
         lateral_channels_in = [512, 512, 256, 128, 64] if 'vgg16' in bb else [2048, 1024, 512, 256, 64]
 
+        # channel_scale_latlayer = channel_scale // 2 if bb == 'resnet50' else 1
+        # channel_last = 32
 
         ch_decoder = lateral_channels_in[0]//2//channel_scale
         self.top_layer = ResBlk(lateral_channels_in[0], ch_decoder)
@@ -86,6 +88,7 @@ class GCoNet(nn.Module):
             self.classifier = nn.Linear(lateral_channels_in[0], 291)       # DUTS_class has 291 classes
             for layer in [self.classifier]:
                 weight_init.c2_msra_fill(layer)
+        self.sgm = nn.Sigmoid()
 
     def forward(self, x):
         ########## Encoder ##########
@@ -163,7 +166,7 @@ class GCoNet(nn.Module):
                     self.classifier(
                         self.avgpool(
                             nn.Sequential(*bb_lst[idx_out:])(
-                                input_features[idx_out] * scaled_preds[-(idx_out+1)]
+                                input_features[idx_out] * (self.sgm(scaled_preds[-(idx_out+1)]) if not idx_out else scaled_preds[-(idx_out+1)])
                             )
                         ).view(N, -1)
                     )

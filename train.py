@@ -31,10 +31,10 @@ parser.add_argument('--model',
                     default='GCoNet',
                     type=str,
                     help="Options: '', ''")
-parser.add_argument('--bs', '--batch_size', default=32, type=int)
+parser.add_argument('--bs', '--batch_size', default=48, type=int)
 parser.add_argument('--lr',
                     '--learning_rate',
-                    default=2e-4,
+                    default=3e-4,
                     type=float,
                     help='Initial learning rate')
 parser.add_argument('--resume',

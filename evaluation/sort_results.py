@@ -49,6 +49,8 @@ improvements_lst = []
 for ckpt in ckpts:
     scores = ss_ar[ss_ar[:, 1] == ckpt]
     if scores.shape[0] != len(gco_scores):
+        improvements_mean.append(-1)
+        improvements_lst.append([-1, -1, 1])
         continue
     score_coca = float(scores[scores[:, 0] == 'CoCA'][0][score_idx])
     score_cosod = float(scores[scores[:, 0] == 'CoSOD3k'][0][score_idx])
@@ -62,8 +64,7 @@ for ckpt in ckpts:
     improvement_mean = np.mean(improvements)
     improvements_mean.append(improvement_mean)
     improvements_lst.append(improvements)
-improvement_indices_sorted = np.argsort(improvements_mean).tolist()[::-1]
-best_improvement_index = improvement_indices_sorted[0]
+best_improvement_index = np.argsort(improvements_mean).tolist()[-1]
 best_ckpt = ckpts[best_improvement_index]
 best_improvement_mean = improvements_mean[best_improvement_index]
 best_improvements = improvements_lst[best_improvement_index]
