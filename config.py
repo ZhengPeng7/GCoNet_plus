@@ -15,18 +15,18 @@ class Config():
         self.GAM = True
 
         # Loss
-        self.criterion_sal = ['bce', 'iou', 'mse'][0]
+        self.lambdas_sal = {
+            # not 0 means opening this loss
+            'bce': 25 * 1,
+            'ssim': 25 * 0,
+            'mse': 125 * 0,
+            'iou': 1 * 0,
+        }
         # ACM, GCM
         losses = ['sal', 'cls', 'contrast', 'cls_mask']
         self.loss = losses[:]
         if not self.GAM and 'contrast' in self.loss:
             self.loss.remove('contrast')
-        if self.criterion_sal == 'bce':
-            self.lambda_sal = 25.
-        elif self.criterion_sal == 'iou':
-            self.lambda_sal = 1.
-        elif self.criterion_sal == 'mse':
-            self.lambda_sal = 125.
 
         self.output_number = 1
         self.loss_sal_last_layers = min(self.output_number, 1)              # used to be last 4 layers
@@ -34,12 +34,14 @@ class Config():
         self.conv_after_itp = False
         self.complex_lateral_connection = False
 
+        # to control the quantitive level of each single loss by number of output branches.
         self.loss_sal_ratio_by_last_layers = 4 / self.loss_sal_last_layers
         self.loss_cls_mask_ratio_by_last_layers = 4 / self.loss_cls_mask_last_layers
-        self.lambda_sal *= self.loss_sal_ratio_by_last_layers
+        for loss_sal in self.lambdas_sal.keys():
+            self.lambdas_sal[loss_sal] *= self.loss_sal_ratio_by_last_layers
+        self.lambda_cls_mask = 2.5 * self.loss_cls_mask_ratio_by_last_layers
         self.lambda_cls = 3.
         self.lambda_contrast = 250.
-        self.lambda_cls_mask = 2.5 * self.loss_cls_mask_ratio_by_last_layers
 
         # Performance of GCoNet
         self.measures = {

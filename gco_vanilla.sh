@@ -6,7 +6,7 @@
 
 # Run python script
 method="gconet_$1"
-size=224
+size=256
 epochs=50
 val_last=30
 

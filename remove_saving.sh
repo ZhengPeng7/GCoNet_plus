@@ -1,7 +1,7 @@
 method="gconet"
 
 # Val
-rm -r tmp4val*
+rm -r tmp*
 
 # Train
 rm slurm*

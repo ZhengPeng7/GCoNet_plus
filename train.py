@@ -240,7 +240,8 @@ def train(epoch):
 
         # Loss
         loss = 0
-        loss_sal = loss_sal * config.lambda_sal
+        # since there may be several losses for sal, the lambdas for them (lambdas_sal) are inside the loss.py
+        loss_sal = loss_sal * 1
         loss += loss_sal
         if 'cls' in config.loss:
             loss_cls = F.cross_entropy(pred_cls, cls_gts) * config.lambda_cls
