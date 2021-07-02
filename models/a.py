@@ -6,9 +6,11 @@ from torchvision.models import vgg16, vgg16_bn
 import fvcore.nn.weight_init as weight_init
 from torchvision.models import resnet50
 
-from models.modules import ResBlk, DSLayer, half_DSLayer, CoAttLayer, RefUnet
+from models.modules import ResBlk, DSLayer, half_DSLayer, CoAttLayer
 
 from config import Config
+
+
 
 
 class GCoNet(nn.Module):
@@ -17,35 +19,25 @@ class GCoNet(nn.Module):
         self.config = Config()
         bb = self.config.bb
         if bb == 'vgg16':
-            bb_net = list(vgg16(pretrained=True).children())[0]
+            bb_vgg16 = list(vgg16(pretrained=True).children())[0]
             bb_convs = OrderedDict({
-                'conv1': bb_net[:4],
-                'conv2': bb_net[4:9],
-                'conv3': bb_net[9:16],
-                'conv4': bb_net[16:23],
-                'conv5': bb_net[23:30]
+                'conv1': bb_vgg16[:4],
+                'conv2': bb_vgg16[4:9],
+                'conv3': bb_vgg16[9:16],
+                'conv4': bb_vgg16[16:23],
+                'conv5': bb_vgg16[23:30]
             })
             channel_scale = 1
         elif bb == 'resnet50':
-            bb_net = list(resnet50(pretrained=True).children())
+            bb_resnet50 = list(resnet50(pretrained=True).children())
             bb_convs = OrderedDict({
-                'conv1': nn.Sequential(*bb_net[0:3]),
-                'conv2': bb_net[4],
-                'conv3': bb_net[5],
-                'conv4': bb_net[6],
-                'conv5': bb_net[7]
+                'conv1': nn.Sequential(*bb_resnet50[0:3]),
+                'conv2': bb_resnet50[4],
+                'conv3': bb_resnet50[5],
+                'conv4': bb_resnet50[6],
+                'conv5': bb_resnet50[7]
             })
             channel_scale = 4
-        elif bb == 'vgg16bn':
-            bb_net = list(vgg16_bn(pretrained=True).children())[0]
-            bb_convs = OrderedDict({
-                'conv1': bb_net[:6],
-                'conv2': bb_net[6:13],
-                'conv3': bb_net[13:23],
-                'conv4': bb_net[23:33],
-                'conv5': bb_net[33:43]
-            })
-            channel_scale = 1
         self.bb = nn.Sequential(bb_convs)
         lateral_channels_in = [512, 512, 256, 128, 64] if 'vgg16' in bb else [2048, 1024, 512, 256, 64]
 
@@ -85,6 +77,7 @@ class GCoNet(nn.Module):
 
         self.enlayer1 = ResBlk(ch_decoder, ch_decoder)
         self.conv_out1 = nn.Sequential(nn.Conv2d(ch_decoder, 1, 1, 1, 0))
+        self.conv_out_mask = nn.Sequential(nn.Conv2d(ch_decoder, 1, 1, 1, 0))
 
         if self.config.GAM:
             self.co_x5 = CoAttLayer(channel_in=lateral_channels_in[0])
@@ -98,12 +91,8 @@ class GCoNet(nn.Module):
             for layer in [self.classifier]:
                 weight_init.c2_msra_fill(layer)
         self.sgm = nn.Sigmoid()
-        if self.config.refine:
-            self.refiner = nn.Sequential(nn.Sigmoid(), RefUnet(self.config.refine, 64))
-        if self.config.split_mask:
-            self.conv_out_mask = nn.Sequential(nn.Conv2d(ch_decoder, 1, 1, 1, 0))
 
-    def forward(self, x):
+    def forward(self, x, epoch=0):
         ########## Encoder ##########
 
         [N, _, H, W] = x.size()
@@ -170,12 +159,7 @@ class GCoNet(nn.Module):
         p1_out = self.conv_out1(p1)
         scaled_preds.append(p1_out)
 
-        if self.config.refine == 1:
-            scaled_preds.append(self.refiner(p1_out))
-        elif self.config.refine == 2:
-            scaled_preds.append(self.refiner(torch.cat([x, p1_out], dim=1)))
-
-        if 'cls_mask' in self.config.loss:
+        if 'cls_mask' in self.config.loss and epoch < self.config.epoch_leave_mask:
             pred_cls_masks = []
             input_features = [x, x1, x2, x3][:self.config.loss_cls_mask_last_layers]
             bb_lst = [self.bb.conv1, self.bb.conv2, self.bb.conv3, self.bb.conv4, self.bb.conv5]
@@ -184,15 +168,13 @@ class GCoNet(nn.Module):
                     self.classifier(
                         self.avgpool(
                             nn.Sequential(*bb_lst[idx_out:])(
-                                input_features[idx_out] * (
-                                    self.sgm(
-                                        self.conv_out_mask(p1) if self.config.split_mask else scaled_preds[-(idx_out+1)]
-                                    ) if not idx_out else scaled_preds[-(idx_out+1)]
-                                )
+                                input_features[idx_out] * (self.sgm(self.conv_out_mask(p1)) if not idx_out else scaled_preds[-(idx_out+1)])
                             )
                         ).view(N, -1)
                     )
                 )
+        else:
+            self.config.loss = self.config.loss[:3]
 
         if self.training:
             if {'sal', 'cls', 'contrast', 'cls_mask'} == set(self.config.loss):

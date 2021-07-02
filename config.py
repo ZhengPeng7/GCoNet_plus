@@ -19,6 +19,7 @@ class Config():
             self.batch_size = 32
         else:
             self.batch_size = 48
+        self.split_mask = True
 
         # Loss
         self.lambdas_sal = {
