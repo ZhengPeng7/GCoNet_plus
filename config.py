@@ -1,18 +1,24 @@
 class Config():
     def __init__(self) -> None:
-        self.bb = ['vgg16', 'resnet50'][0]
+        self.bb = ['vgg16', 'vgg16bn', 'resnet50'][0]
         self.relation_module = ['GAM', 'ICE', 'NonLocal', 'MHA'][0]
         self.rand_seed = 7
         self.preproc_methods = ['flip', 'enhance', 'rotate', 'crop', 'pepper'][:3]
         self.self_supervision = False
         self.label_smoothing = False
         self.freeze = True
+        self.use_bn = 'bn' in self.bb or 'resnet' in self.bb
 
         self.validation = False
 
         # Components
         # GAM
         self.GAM = True
+        self.refine = [0, 1, 4][0]         # 0 -- no refinement, 1 -- only output mask for refinement, 4 -- but also raw input.
+        if self.refine or self.bb != 'vgg16':
+            self.batch_size = 32
+        else:
+            self.batch_size = 48
 
         # Loss
         self.lambdas_sal = {
@@ -42,6 +48,8 @@ class Config():
         self.lambda_cls_mask = 2.5 * self.loss_cls_mask_ratio_by_last_layers
         self.lambda_cls = 3.
         self.lambda_contrast = 250.
+
+        self.lambda_adv = 0.        # turn to 0 to avoid adv training
 
         # Performance of GCoNet
         self.measures = {

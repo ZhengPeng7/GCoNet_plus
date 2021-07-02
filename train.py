@@ -2,6 +2,7 @@ from random import seed
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torch.autograd import Variable
 from util import Logger, AverageMeter, save_checkpoint, save_tensor_img, set_seed
 import os
 import numpy as np
@@ -31,7 +32,6 @@ parser.add_argument('--model',
                     default='GCoNet',
                     type=str,
                     help="Options: '', ''")
-parser.add_argument('--bs', '--batch_size', default=48, type=int)
 parser.add_argument('--lr',
                     '--learning_rate',
                     default=3e-4,
@@ -69,6 +69,8 @@ parser.add_argument('--val_dir',
 args = parser.parse_args()
 
 
+config = Config()
+
 # Prepare dataset
 if args.trainset == 'Jigsaw2_DUTS':
     train_img_path = '../Dataset/Jigsaw2_DUTS/img/'
@@ -77,7 +79,7 @@ if args.trainset == 'Jigsaw2_DUTS':
                               train_gt_path,
                               args.size,
                               1,
-                              max_num=args.bs,
+                              max_num=config.batch_size,
                               istrain=True,
                               shuffle=False,
                               num_workers=4,
@@ -90,7 +92,7 @@ elif args.trainset == 'DUTS_class':
                               train_gt_path,
                               args.size,
                               1,
-                              max_num=args.bs,
+                              max_num=config.batch_size,
                               istrain=True,
                               shuffle=False,
                               num_workers=8,
@@ -107,8 +109,6 @@ for testset in args.testsets.split('+'):
     )
     test_loaders[testset] = test_loader
 
-config = Config()
-
 if config.rand_seed:
     set_seed(config.rand_seed)
 
@@ -123,6 +123,12 @@ device = torch.device("cuda")
 
 model = GCoNet()
 model = model.to(device)
+if config.lambda_adv:
+    from adv import Discriminator
+    disc = Discriminator(channels=1, img_size=args.size).to(device)
+    optimizer_d = optim.Adam(params=disc.parameters(), lr=args.lr, betas=[0.9, 0.99])
+    Tensor = torch.cuda.FloatTensor if (True if torch.cuda.is_available() else False) else torch.FloatTensor
+    adv_criterion = nn.BCELoss()
 
 backbone_params = list(map(id, model.bb.parameters()))
 base_params = filter(lambda p: id(p) not in backbone_params,
@@ -223,7 +229,7 @@ def train(epoch):
             scaled_preds, pred_cls_masks = model(inputs)
         else:
             scaled_preds = model(inputs)
-        scaled_preds = scaled_preds[-min(config.loss_sal_last_layers, 4):]
+        scaled_preds = scaled_preds[-min(config.loss_sal_last_layers+int(bool(config.refine)), 4):]
 
         # Tricks
         loss_sal = dsloss(scaled_preds, gts)
@@ -254,11 +260,27 @@ def train(epoch):
             for pred_cls_mask in pred_cls_masks:
                 loss_cls_mask += F.cross_entropy(pred_cls_mask, cls_gts) * config.lambda_cls_mask
             loss += loss_cls_mask
+        if config.lambda_adv:
+            # gen
+            valid = Variable(Tensor(scaled_preds[-1].shape[0], 1).fill_(1.0), requires_grad=False)
+            adv_loss_g = adv_criterion(disc(scaled_preds[-1]), valid)
+            loss += adv_loss_g * config.lambda_adv
+
         loss_log.update(loss, inputs.size(0))
 
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+
+        if config.lambda_adv and batch_idx % 5 == 0:
+            # disc
+            fake = Variable(Tensor(scaled_preds[-1].shape[0], 1).fill_(0.0), requires_grad=False)
+            optimizer_d.zero_grad()
+            adv_loss_real = adv_criterion(disc(gts), valid)
+            adv_loss_fake = adv_criterion(disc(scaled_preds[-1].detach()), fake)
+            adv_loss_d = (adv_loss_real + adv_loss_fake) / 2 * 1.
+            adv_loss_d.backward()
+            optimizer_d.step()
 
         # Logger
         if batch_idx % 20 == 0:
@@ -271,6 +293,8 @@ def train(epoch):
                 info_loss += ', loss_cls_mask: {:.3f}'.format(loss_cls_mask)
             if 'contrast' in config.loss:
                 info_loss += ', loss_contrast: {:.3f}'.format(loss_contrast)
+            if config.lambda_adv:
+                info_loss += ', loss_adv: {:.3f}, loss_adv_disc: {:.3f}'.format(adv_loss_g, adv_loss_d)
             info_loss += ', Loss_total: {loss.val:.3f} ({loss.avg:.3f})  '.format(loss=loss_log)
             logger.info(''.join((info_progress, info_loss)))
     scheduler.step()
