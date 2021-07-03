@@ -1,6 +1,6 @@
 class Config():
     def __init__(self) -> None:
-        self.bb = ['vgg16', 'vgg16bn', 'resnet50'][0]
+        self.bb = ['vgg16', 'vgg16bn', 'resnet50'][1]
         self.relation_module = ['GAM', 'ICE', 'NonLocal', 'MHA'][0]
         self.rand_seed = 7
         self.preproc_methods = ['flip', 'enhance', 'rotate', 'crop', 'pepper'][:3]
@@ -14,12 +14,13 @@ class Config():
         # Components
         # GAM
         self.GAM = True
-        self.refine = [0, 1, 4][0]         # 0 -- no refinement, 1 -- only output mask for refinement, 4 -- but also raw input.
+        self.refine = [0, 1, 4][2]         # 0 -- no refinement, 1 -- only output mask for refinement, 4 -- but also raw input.
         if self.refine or self.bb != 'vgg16':
             self.batch_size = 32
         else:
             self.batch_size = 48
         self.split_mask = True
+        self.intermediate_output = 3
 
         # Loss
         self.lambdas_sal = {
@@ -60,4 +61,4 @@ class Config():
         }
 
         self.decay_step_size = 300
-        self.val_last = 30
+        self.val_last = 50

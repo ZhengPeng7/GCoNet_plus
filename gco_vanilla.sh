@@ -7,8 +7,8 @@
 # Run python script
 method="gconet_$1"
 size=256
-epochs=50
-val_last=30
+epochs=80
+val_last=50
 
 # Train
 python train.py --trainset DUTS_class --size ${size} --ckpt_dir ckpt/${method} --epochs ${epochs} --val_dir tmp4val_${method}
