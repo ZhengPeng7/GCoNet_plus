@@ -229,7 +229,7 @@ def train(epoch):
             scaled_preds, pred_cls_masks = model(inputs)
         else:
             scaled_preds = model(inputs)
-        scaled_preds = scaled_preds[-min(config.loss_sal_last_layers+int(bool(config.refine)), 4):]
+        scaled_preds = scaled_preds[-min(config.loss_sal_last_layers+int(bool(config.refine)), 4+int(bool(config.refine))):]
 
         # Tricks
         loss_sal = dsloss(scaled_preds, gts)

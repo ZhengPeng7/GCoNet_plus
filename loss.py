@@ -30,25 +30,64 @@ class DSLoss(nn.Module):
     """
     def __init__(self):
         super(DSLoss, self).__init__()
-        self.lambdas_sal = Config().lambdas_sal
-        self.criterions = {}
-        if 'bce' in self.lambdas_sal and self.lambdas_sal['bce']:
-            self.criterions['bce'] = nn.BCELoss()
-        if 'ssim' in self.lambdas_sal and self.lambdas_sal['ssim']:
-            self.criterions['ssim'] = SSIMLoss()
-        if 'mse' in self.lambdas_sal and self.lambdas_sal['mse']:
-            self.criterions['mse'] = nn.MSELoss()
-        if 'iou' in self.lambdas_sal and self.lambdas_sal['iou']:
-            self.criterions['iou'] = IoU_loss()
+        self.config = Config()
+        self.lambdas_sal_last = self.config.lambdas_sal_last
+        self.lambdas_sal_others = self.config.lambdas_sal_others
+
+        self.criterions_last = {}
+        if 'bce' in self.lambdas_sal_last and self.lambdas_sal_last['bce']:
+            self.criterions_last['bce'] = nn.BCELoss()
+        if 'iou' in self.lambdas_sal_last and self.lambdas_sal_last['iou']:
+            self.criterions_last['iou'] = IoU_loss()
+        if 'ssim' in self.lambdas_sal_last and self.lambdas_sal_last['ssim']:
+            self.criterions_last['ssim'] = SSIMLoss()
+        if 'mse' in self.lambdas_sal_last and self.lambdas_sal_last['mse']:
+            self.criterions_last['mse'] = nn.MSELoss()
+
+        self.criterions_others = {}
+        if 'bce' in self.lambdas_sal_others and self.lambdas_sal_others['bce']:
+            self.criterions_others['bce'] = nn.BCELoss()
+        if 'iou' in self.lambdas_sal_others and self.lambdas_sal_others['iou']:
+            self.criterions_others['iou'] = IoU_loss()
+        if 'ssim' in self.lambdas_sal_others and self.lambdas_sal_others['ssim']:
+            self.criterions_others['ssim'] = SSIMLoss()
+        if 'mse' in self.lambdas_sal_others and self.lambdas_sal_others['mse']:
+            self.criterions_others['mse'] = nn.MSELoss()
 
     def forward(self, scaled_preds, gt):
         loss = 0
-        for pred_lvl in scaled_preds[:]:
+        for idx_output, pred_lvl in enumerate(scaled_preds):
             if pred_lvl.shape != gt.shape:
                 pred_lvl = nn.functional.interpolate(pred_lvl, size=gt.shape[2:], mode='bilinear', align_corners=True)
-            for criterion_name, criterion in self.criterions.items():
-                loss += criterion(pred_lvl.sigmoid(), gt) * self.lambdas_sal[criterion_name]
+            if idx_output == len(scaled_preds) - 1:
+                for criterion_name, criterion in self.criterions_last.items():
+                    loss += criterion(pred_lvl.sigmoid(), gt) * self.lambdas_sal_last[criterion_name]
+            else:
+                for criterion_name, criterion in self.criterions_others.items():
+                    loss += criterion(pred_lvl.sigmoid(), gt) * self.lambdas_sal_others[criterion_name]
         return loss
+
+
+class SSIMLoss(torch.nn.Module):
+    def __init__(self, window_size=11, size_average=True):
+        super(SSIMLoss, self).__init__()
+        self.window_size = window_size
+        self.size_average = size_average
+        self.channel = 1
+        self.window = create_window(window_size, self.channel)
+
+    def forward(self, img1, img2):
+        (_, channel, _, _) = img1.size()
+        if channel == self.channel and self.window.data.type() == img1.data.type():
+            window = self.window
+        else:
+            window = create_window(self.window_size, channel)
+            if img1.is_cuda:
+                window = window.cuda(img1.get_device())
+            window = window.type_as(img1)
+            self.window = window
+            self.channel = channel
+        return 1 - _ssim(img1, img2, window, self.window_size, channel, self.size_average)
 
 
 def gaussian(window_size, sigma):
@@ -84,28 +123,6 @@ def _ssim(img1, img2, window, window_size, channel, size_average=True):
         return ssim_map.mean()
     else:
         return ssim_map.mean(1).mean(1).mean(1)
-
-
-class SSIMLoss(torch.nn.Module):
-    def __init__(self, window_size=11, size_average=True):
-        super(SSIMLoss, self).__init__()
-        self.window_size = window_size
-        self.size_average = size_average
-        self.channel = 1
-        self.window = create_window(window_size, self.channel)
-
-    def forward(self, img1, img2):
-        (_, channel, _, _) = img1.size()
-        if channel == self.channel and self.window.data.type() == img1.data.type():
-            window = self.window
-        else:
-            window = create_window(self.window_size, channel)
-            if img1.is_cuda:
-                window = window.cuda(img1.get_device())
-            window = window.type_as(img1)
-            self.window = window
-            self.channel = channel
-        return _ssim(img1, img2, window, self.window_size, channel, self.size_average)
 
 
 def SSIM(x, y):
