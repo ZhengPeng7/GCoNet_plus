@@ -15,12 +15,19 @@ class Config():
         # GAM
         self.GAM = True
         self.refine = [0, 1, 4][2]         # 0 -- no refinement, 1 -- only output mask for refinement, 4 -- but also raw input.
-        if self.refine or self.bb != 'vgg16':
-            self.batch_size = 32
+        if self.refine:
+            self.batch_size = 16
         else:
-            self.batch_size = 48
-        self.lr = 1e-4 * (self.batch_size // 16)
+            if self.bb != 'vgg16':
+                self.batch_size = 32
+            else:
+                self.batch_size = 48
+        self.lr = 1e-4 * (self.batch_size / 16)
         self.split_mask = True
+        self.cls_mask_operation = ['x', '+', 'c'][0]
+        self.db_mask = True and self.split_mask
+        self.db_output_decoder = True
+        self.db_output_refiner = True and self.refine
 
         # Loss
         self.lambdas_sal_last = {
@@ -46,7 +53,6 @@ class Config():
         self.output_number = 1
         self.loss_sal_layers = 4              # used to be last 4 layers
         self.loss_cls_mask_last_layers = 1         # used to be last 4 layers
-        self.cls_mask_operation = ['x', '+', 'c'][0]
         if 'keep in range':
             self.loss_sal_layers = min(self.output_number, self.loss_sal_layers)
             self.loss_cls_mask_last_layers = min(self.output_number, self.loss_cls_mask_last_layers)

@@ -6,7 +6,7 @@ from torchvision.models import vgg16, vgg16_bn
 import fvcore.nn.weight_init as weight_init
 from torchvision.models import resnet50
 
-from models.modules import ResBlk, DSLayer, half_DSLayer, CoAttLayer, RefUnet
+from models.modules import ResBlk, DSLayer, half_DSLayer, CoAttLayer, RefUnet, DBHead
 
 from config import Config
 
@@ -97,11 +97,16 @@ class GCoNet(nn.Module):
             self.classifier = nn.Linear(lateral_channels_in[0], 291)       # DUTS_class has 291 classes
             for layer in [self.classifier]:
                 weight_init.c2_msra_fill(layer)
-        self.sgm = nn.Sigmoid()
+        if self.config.split_mask:
+            self.sgm = nn.Sigmoid()
         if self.config.refine:
-            self.refiner = nn.Sequential(nn.Sigmoid(), RefUnet(self.config.refine, 64))
+            self.refiner = nn.Sequential(RefUnet(self.config.refine, 64))
         if self.config.split_mask:
             self.conv_out_mask = nn.Sequential(nn.Conv2d(ch_decoder, 1, 1, 1, 0))
+        if self.config.db_mask:
+            self.db_mask = DBHead(32)
+        if self.config.db_output_decoder:
+            self.db_output_decoder = DBHead(32)
         if self.config.cls_mask_operation == 'c':
             self.conv_cat_mask = nn.Conv2d(4, 3, 1, 1, 0)
 
@@ -169,12 +174,15 @@ class GCoNet(nn.Module):
 
         p1 = self.enlayer1(p1)
         p1 = F.interpolate(p1, size=x.shape[2:], mode='bilinear', align_corners=True)
-        p1_out = self.conv_out1(p1)
+        if self.config.db_output_decoder:
+            p1_out = self.db_output_decoder(p1)
+        else:
+            p1_out = self.conv_out1(p1)
         scaled_preds.append(p1_out)
 
         if self.config.refine == 1:
             scaled_preds.append(self.refiner(p1_out))
-        elif self.config.refine == 2:
+        elif self.config.refine == 4:
             scaled_preds.append(self.refiner(torch.cat([x, p1_out], dim=1)))
 
         if 'cls_mask' in self.config.loss:
@@ -182,11 +190,15 @@ class GCoNet(nn.Module):
             input_features = [x, x1, x2, x3][:self.config.loss_cls_mask_last_layers]
             bb_lst = [self.bb.conv1, self.bb.conv2, self.bb.conv3, self.bb.conv4, self.bb.conv5]
             for idx_out in range(self.config.loss_cls_mask_last_layers):
-                mask_output = (
-                    self.sgm(
-                        self.conv_out_mask(p1) if self.config.split_mask else scaled_preds[-(idx_out+1)]
-                    ) if not idx_out else scaled_preds[-(idx_out+1)]
-                )
+                if idx_out:
+                    mask_output = scaled_preds[-(idx_out+1+int(bool(self.config.refine)))]
+                else:
+                    if self.config.split_mask:
+                        if self.config.db_mask:
+                            mask_output = self.db_mask(p1)
+                        else:
+                            mask_output = self.sgm(self.conv_out_mask(p1))
+                    
                 if self.config.cls_mask_operation == 'x':
                     masked_features = input_features[idx_out] * mask_output
                 elif self.config.cls_mask_operation == '+':

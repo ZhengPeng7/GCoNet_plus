@@ -10,10 +10,12 @@ import argparse
 import numpy as np
 
 from models.GCoNet import GCoNet
+from config import Config
 
 
 def main(args):
     # Init model
+    config = Config()
 
     device = torch.device("cuda")
     model = GCoNet()
@@ -62,7 +64,10 @@ def main(args):
             for inum in range(num):
                 subpath = subpaths[inum][0]
                 ori_size = (ori_sizes[inum][0].item(), ori_sizes[inum][1].item())
-                res = nn.functional.interpolate(scaled_preds[inum].unsqueeze(0), size=ori_size, mode='bilinear', align_corners=True).sigmoid()
+                if config.db_output_refiner or (not config.refine and config.db_output_decoder):
+                    res = nn.functional.interpolate(scaled_preds[inum].unsqueeze(0), size=ori_size, mode='bilinear', align_corners=True)
+                else:
+                    res = nn.functional.interpolate(scaled_preds[inum].unsqueeze(0), size=ori_size, mode='bilinear', align_corners=True).sigmoid()
                 save_tensor_img(res, os.path.join(saved_root, subpath))
 
 

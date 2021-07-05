@@ -364,70 +364,36 @@ class NonLocal(nn.Module):
         return z
 
 
-def initWeightsKaiming(civilnet):
-    for m in civilnet.modules():
-        if isinstance(m, nn.Conv2d):
-            nn.init.kaiming_normal_(m.weight, mode='fan_out')
-            if m.bias is not None:
-                nn.init.zeros_(m.bias)
-        elif isinstance(m, nn.BatchNorm2d):
-            if m.affine:
-                nn.init.ones_(m.weight)
-                nn.init.zeros_(m.bias)
-        elif isinstance(m, nn.Linear):
-            nn.init.normal_(m.weight, 0, 0.01)
-            if m.bias is not None:
-                nn.init.zeros_(m.bias)
-
-
-class Conv2dBNReLU(nn.Sequential):
-    def __init__(self, in_planes, out_planes, kernel_size=3, stride=1, padding=None, groups=1, bias=False):
-        if padding is None:
-            padding = (kernel_size - 1) // 2
-        super(Conv2dBNReLU, self).__init__(
-            nn.Conv2d(in_planes, out_planes, kernel_size, stride, padding, groups=groups, bias=bias),
-            nn.BatchNorm2d(out_planes, momentum=0.1),
-            nn.ReLU(inplace=True)
-        )
-
-
 class DBHead(nn.Module):
-    def __init__(self, in_channels, k = 50):
-        super(DBHead, self).__init__()
+    def __init__(self, channel_in=32, channel_out=1, k=50):
+        super().__init__()
         self.k = k
         self.binarize = nn.Sequential(
-            Conv2dBNReLU(in_channels, in_channels // 4, kernel_size=3, padding=1),
-            nn.ConvTranspose2d(in_channels // 4, in_channels // 4, 2, 2),
-            nn.BatchNorm2d(in_channels // 4),
-            nn.ReLU(inplace=True),
-            nn.ConvTranspose2d(in_channels // 4, 1, 2, 2),
+            nn.Conv2d(channel_in, channel_in, 3, 1, 1),
+            *[nn.BatchNorm2d(channel_in), nn.ReLU(inplace=True)] if config.use_bn else nn.ReLU(inplace=True),
+            nn.Conv2d(channel_in, channel_in, 3, 1, 1),
+            *[nn.BatchNorm2d(channel_in), nn.ReLU(inplace=True)] if config.use_bn else nn.ReLU(inplace=True),
+            nn.Conv2d(channel_in, channel_out, 1, 1, 0),
             nn.Sigmoid()
         )
 
         self.thresh = nn.Sequential(
-            Conv2dBNReLU(in_channels, in_channels // 4, kernel_size=3, padding=1),
-            nn.ConvTranspose2d(in_channels // 4, in_channels // 4, 2, 2),
-            nn.BatchNorm2d(in_channels // 4),
-            nn.ReLU(inplace=True),
-            nn.ConvTranspose2d(in_channels // 4, 1, 2, 2),
-            nn.Sigmoid())
-
-        self.binarize.apply(initWeightsKaiming)
-        self.thresh.apply(initWeightsKaiming)
-
-
-    def step_function(self, x, y):
-        return torch.reciprocal(1 + torch.exp(-self.k * (x - y)))
+            nn.Conv2d(channel_in, channel_in, 3, padding=1),
+            *[nn.BatchNorm2d(channel_in), nn.ReLU(inplace=True)] if config.use_bn else nn.ReLU(inplace=True),
+            nn.Conv2d(channel_in, channel_in, 3, 1, 1),
+            *[nn.BatchNorm2d(channel_in), nn.ReLU(inplace=True)] if config.use_bn else nn.ReLU(inplace=True),
+            nn.Conv2d(channel_in, channel_out, 1, 1, 0),
+            nn.Sigmoid()
+        )
 
     def forward(self, x):
         shrink_maps = self.binarize(x)
         threshold_maps = self.thresh(x)
-        if self.training:
-            binary_maps = self.step_function(shrink_maps, threshold_maps)
-            y = torch.cat((shrink_maps, threshold_maps, binary_maps), dim=1)
-        else:
-            y = torch.cat((shrink_maps, threshold_maps), dim=1)
-        return y
+        binary_maps = self.step_function(shrink_maps, threshold_maps)
+        return binary_maps
+
+    def step_function(self, x, y):
+        return torch.reciprocal(1 + torch.exp(-self.k * (x - y)))
 
 
 class RefUnet(nn.Module):
@@ -488,6 +454,8 @@ class RefUnet(nn.Module):
         self.conv_d0 = nn.Conv2d(64, 1, 3, padding=1)
 
         self.upscore2 = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
+        if config.db_output_refiner:
+            self.db_output_refiner = DBHead(64)
 
 
     def forward(self, x):
@@ -532,5 +500,11 @@ class RefUnet(nn.Module):
         if config.use_bn:
             d1 = self.bn_d1(d1)
         d1 = self.relu_d1(d1)
-        residual = self.conv_d0(d1)
-        return x + residual
+        if config.db_output_refiner:
+            x = self.db_output_refiner(d1)
+            # print('!!!!!!', x.min(), x.max())
+        else:
+            residual = self.conv_d0(d1)
+            x = x + residual
+            # print('@@@@@@@@@', x.min(), x.max())
+        return x
