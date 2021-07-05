@@ -32,11 +32,6 @@ parser.add_argument('--model',
                     default='GCoNet',
                     type=str,
                     help="Options: '', ''")
-parser.add_argument('--lr',
-                    '--learning_rate',
-                    default=3e-4,
-                    type=float,
-                    help='Initial learning rate')
 parser.add_argument('--resume',
                     default=None,
                     type=str,
@@ -72,19 +67,7 @@ args = parser.parse_args()
 config = Config()
 
 # Prepare dataset
-if args.trainset == 'Jigsaw2_DUTS':
-    train_img_path = '../Dataset/Jigsaw2_DUTS/img/'
-    train_gt_path = '../Dataset/Jigsaw2_DUTS/gt/'
-    train_loader = get_loader(train_img_path,
-                              train_gt_path,
-                              args.size,
-                              1,
-                              max_num=config.batch_size,
-                              istrain=True,
-                              shuffle=False,
-                              num_workers=4,
-                              pin=True)
-elif args.trainset == 'DUTS_class':
+if args.trainset == 'DUTS_class':
     root_dir = '../../../datasets/sod'
     train_img_path = os.path.join(root_dir, 'images/DUTS_class')
     train_gt_path = os.path.join(root_dir, 'gts/DUTS_class')
@@ -126,7 +109,7 @@ model = model.to(device)
 if config.lambda_adv:
     from adv import Discriminator
     disc = Discriminator(channels=1, img_size=args.size).to(device)
-    optimizer_d = optim.Adam(params=disc.parameters(), lr=args.lr, betas=[0.9, 0.99])
+    optimizer_d = optim.Adam(params=disc.parameters(), lr=config.lr, betas=[0.9, 0.99])
     Tensor = torch.cuda.FloatTensor if (True if torch.cuda.is_available() else False) else torch.FloatTensor
     adv_criterion = nn.BCELoss()
 
@@ -134,10 +117,10 @@ backbone_params = list(map(id, model.bb.parameters()))
 base_params = filter(lambda p: id(p) not in backbone_params,
                      model.parameters())
 
-all_params = [{'params': base_params}, {'params': model.bb.parameters(), 'lr': args.lr * 0.01}]
+all_params = [{'params': base_params}, {'params': model.bb.parameters(), 'lr': config.lr * 0.01}]
 
 # Setting optimizer
-optimizer = optim.Adam(params=all_params, lr=args.lr, betas=[0.9, 0.99])
+optimizer = optim.Adam(params=all_params, lr=config.lr, betas=[0.9, 0.99])
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=config.decay_step_size, gamma=0.1)
 
 # Why freeze the backbone?...
@@ -229,7 +212,7 @@ def train(epoch):
             scaled_preds, pred_cls_masks = model(inputs)
         else:
             scaled_preds = model(inputs)
-        scaled_preds = scaled_preds[-min(config.loss_sal_last_layers+int(bool(config.refine)), 4+int(bool(config.refine))):]
+        scaled_preds = scaled_preds[-min(config.loss_sal_layers+int(bool(config.refine)), 4+int(bool(config.refine))):]
 
         # Tricks
         loss_sal = dsloss(scaled_preds, gts)

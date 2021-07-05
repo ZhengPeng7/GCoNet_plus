@@ -19,20 +19,21 @@ class Config():
             self.batch_size = 32
         else:
             self.batch_size = 48
+        self.lr = 1e-4 * (self.batch_size // 16)
         self.split_mask = True
 
         # Loss
         self.lambdas_sal_last = {
             # not 0 means opening this loss
-            # original rate -- 25 : 1 : 25 : 125
-            'bce': 1,
-            'iou': 1,
+            # original rate -- 1 : 30 : 1.5 : 0.2, bce x 25
+            'bce': 15,
+            'iou': 0.25,
             'ssim': 1,
             'mse': 0,
         }
         self.lambdas_sal_others = {
             'bce': 0,
-            'iou': 0,
+            'iou': 0.25,
             'ssim': 0,
             'mse': 0,
         }
@@ -43,11 +44,13 @@ class Config():
             self.loss.remove('contrast')
 
         self.output_number = 1
-        self.loss_sal_last_layers = 4              # used to be last 4 layers
+        self.loss_sal_layers = 4              # used to be last 4 layers
         self.loss_cls_mask_last_layers = 1         # used to be last 4 layers
+        self.cls_mask_operation = ['x', '+', 'c'][0]
         if 'keep in range':
-            self.loss_sal_last_layers, self.loss_cls_mask_last_layers = min(self.output_number, 1), min(self.output_number, 1)
-            self.output_number = min(self.output_number, max(self.loss_sal_last_layers, self.loss_cls_mask_last_layers))
+            self.loss_sal_layers = min(self.output_number, self.loss_sal_layers)
+            self.loss_cls_mask_last_layers = min(self.output_number, self.loss_cls_mask_last_layers)
+            self.output_number = min(self.output_number, max(self.loss_sal_layers, self.loss_cls_mask_last_layers))
             if self.output_number == 1:
                 for cri in self.lambdas_sal_others:
                     self.lambdas_sal_others[cri] = 0
@@ -55,12 +58,11 @@ class Config():
         self.complex_lateral_connection = False
 
         # to control the quantitive level of each single loss by number of output branches.
-        self.loss_sal_ratio_by_last_layers = 4 / self.loss_sal_last_layers
         self.loss_cls_mask_ratio_by_last_layers = 4 / self.loss_cls_mask_last_layers
         for loss_sal in self.lambdas_sal_last.keys():
-            self.lambdas_sal_last[loss_sal] *= self.loss_sal_ratio_by_last_layers
-        for loss_sal in self.lambdas_sal_others.keys():
-            self.lambdas_sal_others[loss_sal] *= self.loss_sal_ratio_by_last_layers
+            loss_sal_ratio_by_last_layers = 4 / (int(bool(self.lambdas_sal_others[loss_sal])) * (self.loss_sal_layers - 1) + 1)
+            self.lambdas_sal_last[loss_sal] *= loss_sal_ratio_by_last_layers
+            self.lambdas_sal_others[loss_sal] *= loss_sal_ratio_by_last_layers
         self.lambda_cls_mask = 2.5 * self.loss_cls_mask_ratio_by_last_layers
         self.lambda_cls = 3.
         self.lambda_contrast = 250.

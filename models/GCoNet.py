@@ -102,6 +102,8 @@ class GCoNet(nn.Module):
             self.refiner = nn.Sequential(nn.Sigmoid(), RefUnet(self.config.refine, 64))
         if self.config.split_mask:
             self.conv_out_mask = nn.Sequential(nn.Conv2d(ch_decoder, 1, 1, 1, 0))
+        if self.config.cls_mask_operation == 'c':
+            self.conv_cat_mask = nn.Conv2d(4, 3, 1, 1, 0)
 
     def forward(self, x):
         ########## Encoder ##########
@@ -180,15 +182,22 @@ class GCoNet(nn.Module):
             input_features = [x, x1, x2, x3][:self.config.loss_cls_mask_last_layers]
             bb_lst = [self.bb.conv1, self.bb.conv2, self.bb.conv3, self.bb.conv4, self.bb.conv5]
             for idx_out in range(self.config.loss_cls_mask_last_layers):
+                mask_output = (
+                    self.sgm(
+                        self.conv_out_mask(p1) if self.config.split_mask else scaled_preds[-(idx_out+1)]
+                    ) if not idx_out else scaled_preds[-(idx_out+1)]
+                )
+                if self.config.cls_mask_operation == 'x':
+                    masked_features = input_features[idx_out] * mask_output
+                elif self.config.cls_mask_operation == '+':
+                    masked_features = input_features[idx_out] + masked_features
+                elif self.config.cls_mask_operation == 'c':
+                    masked_features = self.conv_cat_mask(torch.cat((input_features[idx_out], mask_output), dim=1))
                 pred_cls_masks.append(
                     self.classifier(
                         self.avgpool(
                             nn.Sequential(*bb_lst[idx_out:])(
-                                input_features[idx_out] * (
-                                    self.sgm(
-                                        self.conv_out_mask(p1) if self.config.split_mask else scaled_preds[-(idx_out+1)]
-                                    ) if not idx_out else scaled_preds[-(idx_out+1)]
-                                )
+                                masked_features
                             )
                         ).view(N, -1)
                     )

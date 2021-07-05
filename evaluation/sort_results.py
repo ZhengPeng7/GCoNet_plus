@@ -1,7 +1,10 @@
 import os
+import shutil
 import matplotlib.pyplot as plt
 import numpy as np
 
+
+move_best_results_here = False
 
 record = ['dataset', 'ckpt', 'Emax', 'Smeasure', 'Fmax']
 measurement = 'Emax'
@@ -74,6 +77,11 @@ print(ss_ar[ss_ar[:, 1] == best_ckpt])
 print('Got improvements on CoCA-{:.3f}%, CoSOD3k-{:.3f}%, CoSal2015-{:.3f}%, mean_improvement: {:.3f}%.'.format(
     best_improvements[0]*100, best_improvements[1]*100, best_improvements[2]*100, best_improvement_mean*100
 ))
+trial = int(best_ckpt.split('_')[-1].split('-')[0])
+ep = int(best_ckpt.split('ep')[-1].split(':')[0])
+if move_best_results_here:
+    dr = os.path.join('gconet_{}'.format(trial), 'ep{}'.format(ep))
+    shutil(os.path.join('/home/pz1/datasets/sod/preds', dr), './')
 
 
 # model_indices = sorted([fname.split('_')[-1] for fname in os.listdir('output/details') if 'gconet_' in fname])
