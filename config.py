@@ -25,9 +25,10 @@ class Config():
         self.lr = 1e-4 * (self.batch_size / 16)
         self.split_mask = True
         self.cls_mask_operation = ['x', '+', 'c'][0]
-        self.db_mask = True and self.split_mask
-        self.db_output_decoder = True
-        self.db_output_refiner = True and self.refine
+        self.db_mask = False and self.split_mask
+        self.db_output_decoder = False
+        self.db_output_refiner = False and self.refine
+        self.db_k = 50
 
         # Loss
         self.lambdas_sal_last = {
@@ -83,4 +84,4 @@ class Config():
         }
 
         self.decay_step_size = 300
-        self.val_last = 30
+        self.val_last = 60

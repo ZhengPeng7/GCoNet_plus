@@ -23,7 +23,6 @@ class Eval_thread():
         self.dataset2smeasure_bottom_bound = {'CoCA': 0.673, 'CoSOD3k': 0.802, 'CoSal2015': 0.845}      # S_measures of GCoNet
 
     def run(self, AP=False, AUC=False, save_metrics=False, eval_all_measures=True):
-        os.makedirs(os.path.join(self.output_dir, self.method, self.epoch), exist_ok=True)
         Res = {}
         start_time = time.time()
 
@@ -60,6 +59,7 @@ class Eval_thread():
             FPR = FPR.cpu().numpy()
 
         if save_metrics:
+            os.makedirs(os.path.join(self.output_dir, self.method, self.epoch), exist_ok=True)
             Res['Sm'] = s
             if s > self.dataset2smeasure_bottom_bound[self.dataset]:
                 Res['MAE'] = mae
@@ -207,6 +207,72 @@ class Eval_thread():
 
             Em /= img_num
             return Em
+
+    def select_by_Smeasure(self, bar=0.9, loader_comp=None, bar_comp=0.1):
+        print('Evaluating SMeasure...')
+        good_ones = []
+        good_ones_comp = []
+        alpha, avg_q, img_num = 0.5, 0.0, 0.0
+        with torch.no_grad():
+            trans = transforms.Compose([transforms.ToTensor()])
+            for (pred, gt, predpath), (pred_comp, gt_comp, predpath_comp) in zip(self.loader, loader_comp):
+                # pred X gt
+                if self.cuda:
+                    pred = trans(pred).cuda()
+                    pred = (pred - torch.min(pred)) / (torch.max(pred) -
+                                                       torch.min(pred) + 1e-20)
+                    gt = trans(gt).cuda()
+                else:
+                    pred = trans(pred)
+                    pred = (pred - torch.min(pred)) / (torch.max(pred) -
+                                                       torch.min(pred) + 1e-20)
+                    gt = trans(gt)
+                y = gt.mean()
+                if y == 0:
+                    x = pred.mean()
+                    Q = 1.0 - x
+                elif y == 1:
+                    x = pred.mean()
+                    Q = x
+                else:
+                    gt[gt >= 0.5] = 1
+                    gt[gt < 0.5] = 0
+                    Q = alpha * self._S_object(
+                        pred, gt) + (1 - alpha) * self._S_region(pred, gt)
+                    if Q.item() < 0:
+                        Q = torch.FloatTensor([0.0])
+                img_num += 1.0
+                avg_q += Q.item()
+                # pred_comp X gt
+                if self.cuda:
+                    pred_comp = trans(pred_comp).cuda()
+                    pred_comp = (pred_comp - torch.min(pred_comp)) / (torch.max(pred_comp) -
+                                                       torch.min(pred_comp) + 1e-20)
+                    gt_comp = trans(gt_comp).cuda()
+                else:
+                    pred_comp = trans(pred_comp)
+                    pred_comp = (pred_comp - torch.min(pred_comp)) / (torch.max(pred_comp) -
+                                                       torch.min(pred_comp) + 1e-20)
+                    gt_comp = trans(gt_comp)
+                y = gt_comp.mean()
+                if y == 0:
+                    x = pred_comp.mean()
+                    Q_comp = 1.0 - x
+                elif y == 1:
+                    x = pred_comp.mean()
+                    Q_comp = x
+                else:
+                    gt_comp[gt_comp >= 0.5] = 1
+                    gt_comp[gt_comp < 0.5] = 0
+                    Q_comp = alpha * self._S_object(
+                        pred_comp, gt_comp) + (1 - alpha) * self._S_region(pred_comp, gt_comp)
+                    if Q_comp.item() < 0:
+                        Q_comp = torch.FloatTensor([0.0])
+                if Q.item() > bar and (Q.item() - Q_comp.item()) > bar_comp:
+                    good_ones.append(predpath)
+                    good_ones_comp.append(predpath_comp)
+            avg_q /= img_num
+            return avg_q, good_ones, good_ones_comp
 
     def Eval_Smeasure(self):
         print('Evaluating SMeasure...')

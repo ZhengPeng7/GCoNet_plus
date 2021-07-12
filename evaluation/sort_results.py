@@ -4,9 +4,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-move_best_results_here = False
+move_best_results_here = True
 
-record = ['dataset', 'ckpt', 'Emax', 'Smeasure', 'Fmax']
+record = ['dataset', 'ckpt', 'Emax', 'Smeasure', 'Fmax', 'MAE', 'Emean', 'Fmean']
 measurement = 'Emax'
 score_idx = record.index(measurement)
 
@@ -46,6 +46,10 @@ elif measurement == 'Smeasure':
     gco_scores = {'CoCA': 0.673, 'CoSOD3k': 0.802, 'CoSal2015': 0.845}
 elif measurement == 'Fmax':
     gco_scores = {'CoCA': 0.544, 'CoSOD3k': 0.777, 'CoSal2015': 0.847}
+elif measurement == 'Emean':
+    gco_scores = {'CoCA': 0.1, 'CoSOD3k': 0.1, 'CoSal2015': 0.1}
+elif measurement == 'Fmean':
+    gco_scores = {'CoCA': 0.1, 'CoSOD3k': 0.1, 'CoSal2015': 0.1}
 ckpts = list(set(ss_ar[:, 1].squeeze().tolist()))
 improvements_mean = []
 improvements_lst = []
@@ -80,8 +84,10 @@ print('Got improvements on CoCA-{:.3f}%, CoSOD3k-{:.3f}%, CoSal2015-{:.3f}%, mea
 trial = int(best_ckpt.split('_')[-1].split('-')[0])
 ep = int(best_ckpt.split('ep')[-1].split(':')[0])
 if move_best_results_here:
-    dr = os.path.join('gconet_{}'.format(trial), 'ep{}'.format(ep))
-    shutil(os.path.join('/home/pz1/datasets/sod/preds', dr), './')
+    trial, ep = 'gconet_{}'.format(trial), 'ep{}'.format(ep)
+    dr = os.path.join(trial, ep)
+    dst = '-'.join((trial, ep))
+    shutil.move(os.path.join('/home/pz1/datasets/sod/preds', dr), dst)
 
 
 # model_indices = sorted([fname.split('_')[-1] for fname in os.listdir('output/details') if 'gconet_' in fname])

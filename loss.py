@@ -63,13 +63,11 @@ class DSLoss(nn.Module):
                 if not(self.config.db_output_refiner or (not self.config.refine and self.config.db_output_decoder)):
                     pred_lvl = pred_lvl.sigmoid()
                 for criterion_name, criterion in self.criterions_last.items():
-                    # print(1, criterion_name, pred_lvl.min(), pred_lvl.max())
                     loss += criterion(pred_lvl, gt) * self.lambdas_sal_last[criterion_name]
             else:
                 if not (self.config.refine and self.config.db_output_decoder and idx_output == len(scaled_preds) - 2):
                     pred_lvl = pred_lvl.sigmoid()
                 for criterion_name, criterion in self.criterions_others.items():
-                    # print(2, criterion_name, pred_lvl.min(), pred_lvl.max())
                     loss += criterion(pred_lvl, gt) * self.lambdas_sal_others[criterion_name]
         return loss
 

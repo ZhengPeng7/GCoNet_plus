@@ -198,11 +198,11 @@ class GCoNet(nn.Module):
                             mask_output = self.db_mask(p1)
                         else:
                             mask_output = self.sgm(self.conv_out_mask(p1))
-                    
+
                 if self.config.cls_mask_operation == 'x':
                     masked_features = input_features[idx_out] * mask_output
                 elif self.config.cls_mask_operation == '+':
-                    masked_features = input_features[idx_out] + masked_features
+                    masked_features = input_features[idx_out] + mask_output
                 elif self.config.cls_mask_operation == 'c':
                     masked_features = self.conv_cat_mask(torch.cat((input_features[idx_out], mask_output), dim=1))
                 pred_cls_masks.append(

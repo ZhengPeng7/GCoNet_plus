@@ -365,7 +365,7 @@ class NonLocal(nn.Module):
 
 
 class DBHead(nn.Module):
-    def __init__(self, channel_in=32, channel_out=1, k=50):
+    def __init__(self, channel_in=32, channel_out=1, k=config.db_k):
         super().__init__()
         self.k = k
         self.binarize = nn.Sequential(
@@ -393,7 +393,12 @@ class DBHead(nn.Module):
         return binary_maps
 
     def step_function(self, x, y):
-        return torch.reciprocal(1 + torch.exp(-self.k * (x - y)))
+        z = torch.exp(-self.k * (x - y))
+        if torch.isinf(z).any():
+            a = torch.exp(-50 * (x - y))
+        else:
+            a = z
+        return torch.reciprocal(1 + a)
 
 
 class RefUnet(nn.Module):
@@ -502,9 +507,7 @@ class RefUnet(nn.Module):
         d1 = self.relu_d1(d1)
         if config.db_output_refiner:
             x = self.db_output_refiner(d1)
-            # print('!!!!!!', x.min(), x.max())
         else:
             residual = self.conv_d0(d1)
             x = x + residual
-            # print('@@@@@@@@@', x.min(), x.max())
         return x

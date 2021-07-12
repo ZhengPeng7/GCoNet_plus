@@ -3,6 +3,8 @@
 ckpt
 preds
 evaluation/output
+evaluation/gconet_*
+evaluation/good_ones
 *.out
 tmp*
 
