@@ -28,7 +28,7 @@ class ThrReg_loss(torch.nn.Module):
     def __init__(self):
         super(ThrReg_loss, self).__init__()
 
-    def forward(self, pred):
+    def forward(self, pred, gt=None):
         return torch.mean(1 - ((pred - 0) ** 2 + (pred - 1) ** 2))
 
 
@@ -53,6 +53,8 @@ class DSLoss(nn.Module):
             self.criterions_last['mse'] = nn.MSELoss()
         if 'reg' in self.lambdas_sal_last and self.lambdas_sal_last['reg']:
             self.criterions_last['reg'] = ThrReg_loss()
+        if 'triplet' in self.lambdas_sal_last and self.lambdas_sal_last['triplet']:
+            self.criterion_triplet = nn.TripletMarginLoss()
 
         self.criterions_others = {}
         if 'bce' in self.lambdas_sal_others and self.lambdas_sal_others['bce']:
@@ -64,7 +66,7 @@ class DSLoss(nn.Module):
         if 'mse' in self.lambdas_sal_others and self.lambdas_sal_others['mse']:
             self.criterions_others['mse'] = nn.MSELoss()
 
-    def forward(self, scaled_preds, gt):
+    def forward(self, scaled_preds, gt, norm_features=None):
         loss = 0
         for idx_output, pred_lvl in enumerate(scaled_preds):
             if pred_lvl.shape != gt.shape:
@@ -83,6 +85,15 @@ class DSLoss(nn.Module):
                     pred_lvl = pred_lvl.sigmoid()
                 for criterion_name, criterion in self.criterions_others.items():
                     loss += criterion(pred_lvl, gt) * self.lambdas_sal_others[criterion_name]
+        if self.lambdas_sal_last['triplet'] and norm_features is not None:
+            for norm_feature in norm_features:
+                num_feature_per_group = norm_feature.shape[0] // 2
+                feat_A = norm_feature[:num_feature_per_group]
+                feat_B = norm_feature[num_feature_per_group:]
+                # A/2 - A/2 - B/2
+                loss_triplet_ancA = self.criterion_triplet(feat_A[:num_feature_per_group//2], feat_A[-(num_feature_per_group//2):], feat_B[:num_feature_per_group//2])
+                loss_triplet_ancB = self.criterion_triplet(feat_B[:num_feature_per_group//2], feat_B[-(num_feature_per_group//2):], feat_A[:num_feature_per_group//2])
+                loss += (loss_triplet_ancA + loss_triplet_ancB) * self.config.lambdas_sal_last['triplet']
         return loss
 
 

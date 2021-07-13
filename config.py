@@ -31,26 +31,30 @@ class Config():
         self.db_k = 300
 
         # Loss
-        self.lambdas_sal_last = {
-            # not 0 means opening this loss
-            # original rate -- 1 : 30 : 1.5 : 0.2, bce x 25
-            'bce': 30,
-            'iou': 0.5,
-            'ssim': 0,
-            'mse': 150,
-            'reg': 50,
-        }
-        self.lambdas_sal_others = {
-            'bce': 0,
-            'iou': 0.25,
-            'ssim': 0,
-            'mse': 0,
-        }
         # ACM, GCM
         losses = ['sal', 'cls', 'contrast', 'cls_mask']
         self.loss = losses[:]
         if not self.GAM and 'contrast' in self.loss:
             self.loss.remove('contrast')
+        self.lambdas_sal_last = {
+            # not 0 means opening this loss
+            # original rate -- 1 : 30 : 1.5 : 0.2, bce x 25
+            'bce': 30,
+            'iou': 0.5,
+            'ssim': 1 * 0,
+            'mse': 150 * 0,
+            'reg': 50 * 0,
+            'triplet': 10 * ('cls' in self.loss),
+        }
+        self.triplet = ['_x5', 'mask'][:1]
+        self.lambdas_sal_others = {
+            'bce': 0,
+            'iou': 0.5,
+            'ssim': 0,
+            'mse': 0,
+            'reg': 0,
+            'triplet': 0,
+        }
 
         self.output_number = 1
         self.loss_sal_layers = 4              # used to be last 4 layers

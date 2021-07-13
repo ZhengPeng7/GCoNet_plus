@@ -118,7 +118,6 @@ class CoData(data.Dataset):
         return len(self.image_dirs)
 
 
-# get the dataloader (Note: without data augmentation)
 def get_loader(img_root, gt_root, img_size, batch_size, max_num = float('inf'), istrain=True, shuffle=False, num_workers=0, pin=False):
     dataset = CoData(img_root, gt_root, img_size, max_num, is_train=istrain)
     data_loader = data.DataLoader(dataset=dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers,

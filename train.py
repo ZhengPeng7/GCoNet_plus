@@ -198,24 +198,28 @@ def train(epoch):
         
         gts_neg = torch.full_like(gts, 0.0)
         gts_cat = torch.cat([gts, gts_neg], dim=0)
+        return_values = model(inputs)
         if {'sal', 'cls', 'contrast', 'cls_mask'} == set(config.loss):
-            scaled_preds, pred_cls, pred_contrast, pred_cls_masks = model(inputs)
+            scaled_preds, pred_cls, pred_contrast, pred_cls_masks = return_values[:4]
         elif {'sal', 'cls', 'contrast'} == set(config.loss):
-            scaled_preds, pred_cls, pred_contrast = model(inputs)
+            scaled_preds, pred_cls, pred_contrast = return_values[:3]
         elif {'sal', 'cls', 'cls_mask'} == set(config.loss):
-            scaled_preds, pred_cls, pred_cls_masks = model(inputs)
+            scaled_preds, pred_cls, pred_cls_masks = return_values[:3]
         elif {'sal', 'cls'} == set(config.loss):
-            scaled_preds, pred_cls = model(inputs)
+            scaled_preds, pred_cls = return_values[:2]
         elif {'sal', 'contrast'} == set(config.loss):
-            scaled_preds, pred_contrast = model(inputs)
+            scaled_preds, pred_contrast = return_values[:2]
         elif {'sal', 'cls_mask'} == set(config.loss):
-            scaled_preds, pred_cls_masks = model(inputs)
+            scaled_preds, pred_cls_masks = return_values[:2]
         else:
-            scaled_preds = model(inputs)
+            scaled_preds = return_values[:1]
+        norm_features = None
+        if config.lambdas_sal_last['triplet']:
+            norm_features = return_values[-1]
         scaled_preds = scaled_preds[-min(config.loss_sal_layers+int(bool(config.refine)), 4+int(bool(config.refine))):]
 
         # Tricks
-        loss_sal = dsloss(scaled_preds, gts)
+        loss_sal = dsloss(scaled_preds, gts, norm_features=norm_features)
         if config.label_smoothing:
             loss_sal = 0.5 * (loss_sal + dsloss(scaled_preds, generate_smoothed_gt(gts)))
         if config.self_supervision:

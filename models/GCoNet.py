@@ -1,5 +1,6 @@
 from collections import OrderedDict
 import torch
+from torch.functional import norm
 import torch.nn as nn
 import torch.nn.functional as F
 from torchvision.models import vgg16, vgg16_bn
@@ -123,6 +124,7 @@ class GCoNet(nn.Module):
         if 'cls' in self.config.loss:
             _x5 = self.avgpool(x5)
             _x5 = _x5.view(_x5.size(0), -1)
+            print("_x5.shape, x.shape:", _x5.shape, x.shape)
             pred_cls = self.classifier(_x5)
 
         if self.config.GAM:
@@ -187,6 +189,7 @@ class GCoNet(nn.Module):
 
         if 'cls_mask' in self.config.loss:
             pred_cls_masks = []
+            norm_features_mask = []
             input_features = [x, x1, x2, x3][:self.config.loss_cls_mask_last_layers]
             bb_lst = [self.bb.conv1, self.bb.conv2, self.bb.conv3, self.bb.conv4, self.bb.conv5]
             for idx_out in range(self.config.loss_cls_mask_last_layers):
@@ -205,30 +208,42 @@ class GCoNet(nn.Module):
                     masked_features = input_features[idx_out] + mask_output
                 elif self.config.cls_mask_operation == 'c':
                     masked_features = self.conv_cat_mask(torch.cat((input_features[idx_out], mask_output), dim=1))
+                norm_feature_mask = self.avgpool(
+                    nn.Sequential(*bb_lst[idx_out:])(
+                        masked_features
+                    )
+                ).view(N, -1)
+                norm_features_mask.append(norm_feature_mask)
                 pred_cls_masks.append(
                     self.classifier(
-                        self.avgpool(
-                            nn.Sequential(*bb_lst[idx_out:])(
-                                masked_features
-                            )
-                        ).view(N, -1)
+                        norm_feature_mask
                     )
                 )
 
         if self.training:
+            return_values = []
             if {'sal', 'cls', 'contrast', 'cls_mask'} == set(self.config.loss):
-                return scaled_preds, pred_cls, pred_contrast, pred_cls_masks
+                return_values = [scaled_preds, pred_cls, pred_contrast, pred_cls_masks]
             elif {'sal', 'cls', 'contrast'} == set(self.config.loss):
-                return scaled_preds, pred_cls, pred_contrast
+                return_values = [scaled_preds, pred_cls, pred_contrast]
             elif {'sal', 'cls', 'cls_mask'} == set(self.config.loss):
-                return scaled_preds, pred_cls, pred_cls_masks
+                return_values = [scaled_preds, pred_cls, pred_cls_masks]
             elif {'sal', 'cls'} == set(self.config.loss):
-                return scaled_preds, pred_cls
+                return_values = [scaled_preds, pred_cls]
             elif {'sal', 'contrast'} == set(self.config.loss):
-                return scaled_preds, pred_contrast
+                return_values = [scaled_preds, pred_contrast]
             elif {'sal', 'cls_mask'} == set(self.config.loss):
-                return scaled_preds, pred_cls_masks
+                return_values = [scaled_preds, pred_cls_masks]
             else:
-                return scaled_preds
+                return_values = [scaled_preds]
+            
+            if self.config.lambdas_sal_last['triplet']:
+                norm_features = []
+                if '_x5' in self.config.triplet:
+                    norm_features.append(_x5)
+                if 'mask' in self.config.triplet:
+                    norm_features.append(norm_features_mask[0])
+                return_values.append(norm_features)
+            return return_values
         else:
             return scaled_preds

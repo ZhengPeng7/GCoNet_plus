@@ -13,26 +13,26 @@ val_last=20
 # Train
 python train.py --trainset DUTS_class --size ${size} --ckpt_dir ckpt/${method} --epochs ${epochs} --val_dir tmp4val_${method}
 
-# # Show validation results
-# python collect_bests.py
+# # # Show validation results
+# # python collect_bests.py
 
-# Test
-for ((ep=${epochs}-${val_last};ep<${epochs};ep++))
-do
-pred_dir=/home/pz1/datasets/sod/preds/${method}/ep${ep}
-rm -rf ${pred_dir}
-python test.py --pred_dir ${pred_dir} --ckpt ckpt/${method}/ep${ep}.pth --size ${size}
-done
-
-
-# Eval
-cd evaluation
-python main.py --methods ${method}
-python sort_results.py
-python select_results.py
-cd ..
+# # Test
+# for ((ep=${epochs}-${val_last};ep<${epochs};ep++))
+# do
+# pred_dir=/home/pz1/datasets/sod/preds/${method}/ep${ep}
+# rm -rf ${pred_dir}
+# python test.py --pred_dir ${pred_dir} --ckpt ckpt/${method}/ep${ep}.pth --size ${size}
+# done
 
 
+# # Eval
+# cd evaluation
+# python main.py --methods ${method}
+# python sort_results.py
+# python select_results.py
+# cd ..
 
-nvidia-smi
-hostname
+
+
+# nvidia-smi
+# hostname
