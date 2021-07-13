@@ -24,7 +24,8 @@ def main(cfg):
         loader = EvalDataset(
             dir_prediction,        # preds
             dir_gt,                   # GT
-            return_predpath=True
+            return_predpath=True,
+            return_gtpath=True
         )
         loader_comp = EvalDataset(
             dir_prediction_comp,        # preds
@@ -33,19 +34,20 @@ def main(cfg):
         )
         print('Selecting predictions from {}'.format(dir_prediction))
         thread = Eval_thread(loader, cuda=cfg.cuda)
-        s_measure, good_ones, good_ones_comp = thread.select_by_Smeasure(bar=0.95, loader_comp=loader_comp, bar_comp=0.2)
+        s_measure, good_ones, good_ones_comp, good_ones_gt = thread.select_by_Smeasure(bar=0.95, loader_comp=loader_comp, bar_comp=0.2)
         dir_good_ones = os.path.join(root_dir_good_ones, dataset)
         os.makedirs(dir_good_ones, exist_ok=True)
         print('have good_ones {}'.format(len(good_ones)))
-        for good_one, good_one_comp in zip(good_ones, good_ones_comp):
+        for good_one, good_one_comp, good_one_gt in zip(good_ones, good_ones_comp, good_ones_gt):
             dir_category = os.path.join(dir_good_ones, good_one.split('/')[-2])
             os.makedirs(dir_category, exist_ok=True)
             save_path = os.path.join(dir_category, good_one.split('/')[-1])
             sal_map = cv2.imread(good_one, 0)
             sal_map_comp = cv2.imread(good_one_comp, 0)
+            sal_map_gt = cv2.imread(good_one_gt, 0)
             cv2.imwrite(save_path, sal_map)
             split_line = np.zeros((sal_map.shape[0], 10)).astype(sal_map.dtype) + 127
-            comp = cv2.hconcat([sal_map, split_line, sal_map_comp])
+            comp = cv2.hconcat([sal_map_gt, split_line, sal_map, split_line, sal_map_comp])
             save_path_comp = ''.join((save_path[:-4], '_comp', save_path[-4:]))
             cv2.imwrite(save_path_comp, comp)
 

@@ -1,20 +1,20 @@
 class Config():
     def __init__(self) -> None:
         self.bb = ['vgg16', 'vgg16bn', 'resnet50'][1]
+        self.use_bn = 'bn' in self.bb or 'resnet' in self.bb
         self.relation_module = ['GAM', 'ICE', 'NonLocal', 'MHA'][0]
         self.rand_seed = 7
         self.preproc_methods = ['flip', 'enhance', 'rotate', 'crop', 'pepper'][:3]
         self.self_supervision = False
         self.label_smoothing = False
         self.freeze = True
-        self.use_bn = 'bn' in self.bb or 'resnet' in self.bb
 
         self.validation = False
 
         # Components
         # GAM
         self.GAM = True
-        self.refine = [0, 1, 4][2]         # 0 -- no refinement, 1 -- only output mask for refinement, 4 -- but also raw input.
+        self.refine = [0, 1, 4][0]         # 0 -- no refinement, 1 -- only output mask for refinement, 4 -- but also raw input.
         if self.refine:
             self.batch_size = 16
         else:
@@ -28,16 +28,17 @@ class Config():
         self.db_mask = False and self.split_mask
         self.db_output_decoder = False
         self.db_output_refiner = False and self.refine
-        self.db_k = 50
+        self.db_k = 300
 
         # Loss
         self.lambdas_sal_last = {
             # not 0 means opening this loss
             # original rate -- 1 : 30 : 1.5 : 0.2, bce x 25
-            'bce': 15,
-            'iou': 0.25,
-            'ssim': 1,
-            'mse': 0,
+            'bce': 30,
+            'iou': 0.5,
+            'ssim': 0,
+            'mse': 150,
+            'reg': 50,
         }
         self.lambdas_sal_others = {
             'bce': 0,

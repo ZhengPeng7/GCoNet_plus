@@ -24,6 +24,14 @@ class IoU_loss(torch.nn.Module):
         return IoU
 
 
+class ThrReg_loss(torch.nn.Module):
+    def __init__(self):
+        super(ThrReg_loss, self).__init__()
+
+    def forward(self, pred):
+        return torch.mean(1 - ((pred - 0) ** 2 + (pred - 1) ** 2))
+
+
 class DSLoss(nn.Module):
     """
     IoU loss for outputs in [1:] scales.
@@ -43,6 +51,8 @@ class DSLoss(nn.Module):
             self.criterions_last['ssim'] = SSIMLoss()
         if 'mse' in self.lambdas_sal_last and self.lambdas_sal_last['mse']:
             self.criterions_last['mse'] = nn.MSELoss()
+        if 'reg' in self.lambdas_sal_last and self.lambdas_sal_last['reg']:
+            self.criterions_last['reg'] = ThrReg_loss()
 
         self.criterions_others = {}
         if 'bce' in self.lambdas_sal_others and self.lambdas_sal_others['bce']:
@@ -64,6 +74,10 @@ class DSLoss(nn.Module):
                     pred_lvl = pred_lvl.sigmoid()
                 for criterion_name, criterion in self.criterions_last.items():
                     loss += criterion(pred_lvl, gt) * self.lambdas_sal_last[criterion_name]
+                # loss_outside = self.criterions_last['iou'](pred_lvl * (1 - gt), gt * (1 - gt)) * self.lambdas_sal_last['iou'] * 2
+                # loss_inside = self.criterions_last['bce'](pred_lvl * gt, gt) * self.lambdas_sal_last['bce'] * 2
+                # loss_inside += self.criterions_last['mse'](pred_lvl * gt, gt) * self.lambdas_sal_last['mse'] * 2
+                # loss += (loss_outside + loss_inside)
             else:
                 if not (self.config.refine and self.config.db_output_decoder and idx_output == len(scaled_preds) - 2):
                     pred_lvl = pred_lvl.sigmoid()

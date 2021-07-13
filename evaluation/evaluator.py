@@ -212,10 +212,11 @@ class Eval_thread():
         print('Evaluating SMeasure...')
         good_ones = []
         good_ones_comp = []
+        good_ones_gt = []
         alpha, avg_q, img_num = 0.5, 0.0, 0.0
         with torch.no_grad():
             trans = transforms.Compose([transforms.ToTensor()])
-            for (pred, gt, predpath), (pred_comp, gt_comp, predpath_comp) in zip(self.loader, loader_comp):
+            for (pred, gt, predpath, gtpath), (pred_comp, gt_comp, predpath_comp) in zip(self.loader, loader_comp):
                 # pred X gt
                 if self.cuda:
                     pred = trans(pred).cuda()
@@ -271,8 +272,9 @@ class Eval_thread():
                 if Q.item() > bar and (Q.item() - Q_comp.item()) > bar_comp:
                     good_ones.append(predpath)
                     good_ones_comp.append(predpath_comp)
+                    good_ones_gt.append(gtpath)
             avg_q /= img_num
-            return avg_q, good_ones, good_ones_comp
+            return avg_q, good_ones, good_ones_comp, good_ones_gt
 
     def Eval_Smeasure(self):
         print('Evaluating SMeasure...')
@@ -310,6 +312,7 @@ class Eval_thread():
             return avg_q
 
     def LOG(self, output):
+        os.makedirs(self.output_dir, exist_ok=True)
         with open(self.logfile, 'a') as f:
             f.write(output)
 
