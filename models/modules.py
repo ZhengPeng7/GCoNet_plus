@@ -393,11 +393,16 @@ class DBHead(nn.Module):
         return binary_maps
 
     def step_function(self, x, y):
-        z = torch.exp(-self.k * (x - y))
+        if config.db_k_alpha != 1:
+            z = x - y
+            mask_neg_inv = 1 - 2 * (z < 0)
+
+            a = torch.exp(-self.k * (torch.pow(z * mask_neg_inv + 1e-16, 1/config.k_alpha) * mask_neg_inv))
+        else:
+            a = torch.exp(-self.k * (x - y))
         if torch.isinf(z).any():
             a = torch.exp(-50 * (x - y))
-        else:
-            a = z
+
         return torch.reciprocal(1 + a)
 
 

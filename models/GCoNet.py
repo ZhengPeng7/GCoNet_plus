@@ -124,7 +124,6 @@ class GCoNet(nn.Module):
         if 'cls' in self.config.loss:
             _x5 = self.avgpool(x5)
             _x5 = _x5.view(_x5.size(0), -1)
-            print("_x5.shape, x.shape:", _x5.shape, x.shape)
             pred_cls = self.classifier(_x5)
 
         if self.config.GAM:

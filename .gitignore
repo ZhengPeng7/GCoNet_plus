@@ -7,6 +7,7 @@ evaluation/gconet_*
 evaluation/good_ones
 *.out
 tmp*
+*.pth
 
 
 # Byte-compiled / optimized / DLL files

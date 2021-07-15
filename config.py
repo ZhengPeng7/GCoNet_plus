@@ -29,6 +29,7 @@ class Config():
         self.db_output_decoder = False
         self.db_output_refiner = False and self.refine
         self.db_k = 300
+        self.db_k_alpha = 1
 
         # Loss
         # ACM, GCM
@@ -43,8 +44,8 @@ class Config():
             'iou': 0.5,
             'ssim': 1 * 0,
             'mse': 150 * 0,
-            'reg': 50 * 0,
-            'triplet': 10 * ('cls' in self.loss),
+            'reg': 100 * 1,
+            'triplet': 0 * ('cls' in self.loss),
         }
         self.triplet = ['_x5', 'mask'][:1]
         self.lambdas_sal_others = {

@@ -7,7 +7,9 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 
 class EvalDataset(data.Dataset):
-    def __init__(self, pred_root, label_root):
+    def __init__(self, pred_root, label_root, return_predpath=False, return_gtpath=False):
+        self.return_predpath = return_predpath
+        self.return_gtpath = return_gtpath
         pred_dirs = os.listdir(pred_root)
         label_dirs = os.listdir(label_root)
 
@@ -31,11 +33,18 @@ class EvalDataset(data.Dataset):
 
 
     def __getitem__(self, item):
-        pred = Image.open(self.image_path[item]).convert('L')
+        predpath = self.image_path[item]
+        gtpath = self.label_path[item]
+        pred = Image.open(predpath).convert('L')
         gt = self.labels[item]
         if pred.size != gt.size:
             pred = pred.resize(gt.size, Image.BILINEAR)
-        return pred, gt
+        returns = [pred, gt]
+        if self.return_predpath:
+            returns.append(predpath)
+        if self.return_gtpath:
+            returns.append(gtpath)
+        return returns
 
     def __len__(self):
         return len(self.image_path)

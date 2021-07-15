@@ -151,13 +151,13 @@ def main():
     if args.resume:
         if os.path.isfile(args.resume):
             logger.info("=> loading checkpoint '{}'".format(args.resume))
-            checkpoint = torch.load(args.resume)
-            args.start_epoch = checkpoint['epoch']
-            model.load_state_dict(checkpoint['state_dict'])
-            optimizer.load_state_dict(checkpoint['optimizer'])
-            scheduler.load_state_dict(checkpoint['scheduler'])
-            logger.info("=> loaded checkpoint '{}' (epoch {})".format(
-                args.resume, checkpoint['epoch']))
+            # checkpoint = torch.load(args.resume)
+            # args.start_epoch = checkpoint['epoch']
+            model.load_state_dict(torch.load(args.resume))
+            # optimizer.load_state_dict(checkpoint['optimizer'])
+            # scheduler.load_state_dict(checkpoint['scheduler'])
+            # logger.info("=> loaded checkpoint '{}' (epoch {})".format(
+            #     args.resume, checkpoint['epoch']))
         else:
             logger.info("=> no checkpoint found at '{}'".format(args.resume))
 
@@ -188,6 +188,7 @@ def main():
 
 def train(epoch):
     loss_log = AverageMeter()
+    loss_log_triplet = AverageMeter()
     model.train()
     FL = PTL.BinaryFocalLoss()
 
@@ -219,7 +220,10 @@ def train(epoch):
         scaled_preds = scaled_preds[-min(config.loss_sal_layers+int(bool(config.refine)), 4+int(bool(config.refine))):]
 
         # Tricks
-        loss_sal = dsloss(scaled_preds, gts, norm_features=norm_features)
+        if config.lambdas_sal_last['triplet']:
+            loss_sal, loss_triplet = dsloss(scaled_preds, gts, norm_features=norm_features, labels=cls_gts)
+        else:
+            loss_sal = dsloss(scaled_preds, gts)
         if config.label_smoothing:
             loss_sal = 0.5 * (loss_sal + dsloss(scaled_preds, generate_smoothed_gt(gts)))
         if config.self_supervision:
@@ -254,6 +258,8 @@ def train(epoch):
             loss += adv_loss_g * config.lambda_adv
 
         loss_log.update(loss, inputs.size(0))
+        if config.lambdas_sal_last['triplet']:
+            loss_log_triplet.update(loss_triplet, inputs.size(0))
 
         optimizer.zero_grad()
         loss.backward()
@@ -282,10 +288,15 @@ def train(epoch):
                 info_loss += ', loss_contrast: {:.3f}'.format(loss_contrast)
             if config.lambda_adv:
                 info_loss += ', loss_adv: {:.3f}, loss_adv_disc: {:.3f}'.format(adv_loss_g, adv_loss_d)
+            if config.lambdas_sal_last['triplet']:
+                info_loss += ', loss_triplet: {:.3f}'.format(loss_triplet)
             info_loss += ', Loss_total: {loss.val:.3f} ({loss.avg:.3f})  '.format(loss=loss_log)
             logger.info(''.join((info_progress, info_loss)))
     scheduler.step()
-    logger.info('@==Final== Epoch[{0}/{1}]  Train Loss: {loss.avg:.3f}  '.format(epoch, args.epochs, loss=loss_log))
+    info_loss = '@==Final== Epoch[{0}/{1}]  Train Loss: {loss.avg:.3f}  '.format(epoch, args.epochs, loss=loss_log)
+    if config.lambdas_sal_last['triplet']:
+        info_loss += 'Triplet Loss: {loss.avg:.3f}  '.format(loss=loss_log_triplet)
+    logger.info(info_loss)
 
     return loss_log.avg
 

@@ -6,6 +6,7 @@ rm -r tmp*
 # Train
 rm slurm*
 rm -r ckpt
+rm *.pth
 
 # Eval
 rm -r evaluation/output
