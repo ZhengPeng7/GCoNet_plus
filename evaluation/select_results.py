@@ -42,12 +42,14 @@ def main(cfg):
             dir_category = os.path.join(dir_good_ones, good_one.split('/')[-2])
             os.makedirs(dir_category, exist_ok=True)
             save_path = os.path.join(dir_category, good_one.split('/')[-1])
-            sal_map = cv2.imread(good_one, 0)
-            sal_map_comp = cv2.imread(good_one_comp, 0)
-            sal_map_gt = cv2.imread(good_one_gt, 0)
+            sal_map = cv2.imread(good_one)
+            sal_map_gt = cv2.imread(good_one_gt)
+            sal_map_comp = cv2.imread(good_one_comp)
+            image_path = good_one_gt.replace('/gts', '/images').replace('.png', '.jpg')
+            image = cv2.imread(image_path)
             cv2.imwrite(save_path, sal_map)
-            split_line = np.zeros((sal_map.shape[0], 10)).astype(sal_map.dtype) + 127
-            comp = cv2.hconcat([sal_map_gt, split_line, sal_map, split_line, sal_map_comp])
+            split_line = np.zeros((sal_map.shape[0], 10, 3)).astype(sal_map.dtype) + 127
+            comp = cv2.hconcat([image, split_line, sal_map_gt, split_line, sal_map, split_line, sal_map_comp])
             save_path_comp = ''.join((save_path[:-4], '_comp', save_path[-4:]))
             cv2.imwrite(save_path_comp, comp)
 

@@ -4,7 +4,7 @@ import cv2
 import matplotlib.pyplot as plt
 
 
-root_dir = [rd for rd in os.listdir('.') if 'gconet_' in rd][0]
+root_dir = os.path.join([rd for rd in os.listdir('.') if 'gconet_' in rd][0], 'CoCA/Accordion')
 image_paths = [os.path.join(root_dir, p) for p in os.listdir(root_dir)]
 pixel_values = []
 for image_path in image_paths:

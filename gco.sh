@@ -7,7 +7,7 @@
 # Run python script
 method="gconet_$1"
 size=256
-epochs=100
+epochs=120
 val_last=40
 
 # Train

@@ -44,13 +44,13 @@ class Config():
             'iou': 0.5,
             'ssim': 1 * 0,
             'mse': 150 * 0,
-            'reg': 100 * 1,
+            'reg': 100 * 0,
             'triplet': 0 * ('cls' in self.loss),
         }
         self.triplet = ['_x5', 'mask'][:1]
         self.lambdas_sal_others = {
             'bce': 0,
-            'iou': 0.5,
+            'iou': 0.,
             'ssim': 0,
             'mse': 0,
             'reg': 0,
@@ -90,4 +90,4 @@ class Config():
         }
 
         self.decay_step_size = 300
-        self.val_last = 60
+        self.val_last = 40
