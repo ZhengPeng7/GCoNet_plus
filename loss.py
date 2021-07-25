@@ -171,7 +171,7 @@ class DSLoss(nn.Module):
         if 'reg' in self.lambdas_sal_last and self.lambdas_sal_last['reg']:
             self.criterions_last['reg'] = ThrReg_loss()
         if 'triplet' in self.lambdas_sal_last and self.lambdas_sal_last['triplet']:
-            margin = 0.1
+            margin = self.config.triplet_loss_margin
             if self.triplet_loss == 'vanilla':
                 self.criterion_triplet = nn.TripletMarginLoss(margin=margin)
             elif self.criterion_triplet == 'semi_hard':

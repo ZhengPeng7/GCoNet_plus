@@ -339,7 +339,7 @@ def validate(model, test_loaders, testsets):
         evaler = Eval_thread(eval_loader, cuda=True)
         # Use S_measure for validation
         s_measure = evaler.Eval_Smeasure()
-        if s_measure > config.measures['Smeasure']['CoCA'] and 0:
+        if s_measure > config.val_measures['Smeasure']['CoCA'] and 0:
             # TODO: evluate others measures if s_measure is very high.
             e_max = evaler.Eval_Emeasure().max().item()
             f_max = evaler.Eval_fmeasure().max().item()

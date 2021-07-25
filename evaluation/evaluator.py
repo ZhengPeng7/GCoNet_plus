@@ -22,23 +22,33 @@ class Eval_thread():
         self.logfile = os.path.join(output_dir, 'result.txt')
         self.dataset2smeasure_bottom_bound = {'CoCA': 0.673, 'CoSOD3k': 0.802, 'CoSal2015': 0.845}      # S_measures of GCoNet
 
-    def run(self, AP=False, AUC=False, save_metrics=False, eval_all_measures=True):
+    def run(self, AP=False, AUC=False, save_metrics=False, continue_eval=True):
         Res = {}
         start_time = time.time()
 
-        s = self.Eval_Smeasure()
-
-        if s > self.dataset2smeasure_bottom_bound[self.dataset] and eval_all_measures:
-            mae = self.Eval_mae()
-            Em = self.Eval_Emeasure()
-            max_e = Em.max().item()
-            mean_e = Em.mean().item()
-            Em = Em.cpu().numpy()
-            Fm, prec, recall = self.Eval_fmeasure()
-            max_f = Fm.max().item()
-            mean_f = Fm.mean().item()
-            Fm = Fm.cpu().numpy()
+        if continue_eval:
+            s = self.Eval_Smeasure()
+            if s > self.dataset2smeasure_bottom_bound[self.dataset]:
+                mae = self.Eval_mae()
+                Em = self.Eval_Emeasure()
+                max_e = Em.max().item()
+                mean_e = Em.mean().item()
+                Em = Em.cpu().numpy()
+                Fm, prec, recall = self.Eval_fmeasure()
+                max_f = Fm.max().item()
+                mean_f = Fm.mean().item()
+                Fm = Fm.cpu().numpy()
+            else:
+                mae = 1
+                Em = torch.zeros(255).cpu().numpy()
+                max_e = 0
+                mean_e = 0
+                Fm, prec, recall = 0, 0, 0
+                max_f = 0
+                mean_f = 0
+                continue_eval = False
         else:
+            s = 0
             mae = 1
             Em = torch.zeros(255).cpu().numpy()
             max_e = 0
@@ -46,7 +56,8 @@ class Eval_thread():
             Fm, prec, recall = 0, 0, 0
             max_f = 0
             mean_f = 0
-            eval_all_measures = False
+            continue_eval = False
+
 
         if AP:
             prec = prec.cpu().numpy()
@@ -99,7 +110,7 @@ class Eval_thread():
         info += '.'
         self.LOG(info + '\n')
 
-        return '[cost:{:.4f}s] '.format(time.time() - start_time) + info, eval_all_measures
+        return '[cost:{:.4f}s] '.format(time.time() - start_time) + info, continue_eval
 
     def Eval_mae(self):
         if self.epoch:
