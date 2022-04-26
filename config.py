@@ -4,7 +4,7 @@ import os
 class Config():
     def __init__(self) -> None:
         # Backbone
-        self.bb = ['vgg16', 'vgg16bn', 'resnet50'][0]
+        self.bb = ['vgg16', 'vgg16bn', 'resnet50'][1]
         # BN
         self.use_bn = 'bn' in self.bb or 'resnet' in self.bb
         # Augmentation
