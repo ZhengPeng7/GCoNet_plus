@@ -3,7 +3,7 @@ This repo is the official implementation of "GCoNet+: Group Collaborative Learni
 
 ## Abstract
 
-Abstract—In this paper, we present a novel end-to-end Group Collaborative Learning Network, termed GCoNet+, which can efficiently
+In this paper, we present a novel end-to-end Group Collaborative Learning Network, termed GCoNet+, which can efficiently
 (250 fps) identify co-salient objects in natural scenes. GCoNet+ is based on group collaborative learning that simultaneously mines
 consensus representations. We achieve the new state-of-the-art performance by introducing two essential criteria: 1) intra-group
 compactness to better formulate the consistency among co-salient objects by capturing their inherent shared attributes using our
