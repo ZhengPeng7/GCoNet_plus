@@ -37,11 +37,10 @@ has been released at [https://github.com/ZhengPeng7/GCoNet_plus](https://github.
 
 1. **Environment**
 
-```
-GPU: V100 x 1
-Install Python 3.7, PyTorch 1.8.2
-pip install requirements.txt
-```
+    ```
+    GPU: V100 x 1
+    Install Python 3.7, PyTorch 1.8.2
+    pip install requirements.txt
 
 2. **Datasets preparation**
 
