@@ -81,7 +81,7 @@ pip install requirements.txt
 
 ## Acknowledgement
 
-We appreciate the codebase of [GICD](https://github.com/zzhanghub/gicd), [GCoNet](https://github.com/fanq15/GCoNet).
+We appreciate the codebases of [GICD](https://github.com/zzhanghub/gicd), [GCoNet](https://github.com/fanq15/GCoNet).
 
 ## Contact
 
