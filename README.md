@@ -23,15 +23,15 @@ has been released at [https://github.com/ZhengPeng7/GCoNet_plus](https://github.
 
 + Comparison with the previous state-of-the-art methods:
 
-<img src="README.assets/image-20220426224731550.png" alt="image-20220426224731550" style="zoom:80%;" />
+<img src="README.assets/image-20220426224731550.png" alt="image-20220426224731550" style="zoom: 67%;" />
 
 + Ablation study:
 
-<img src="README.assets/image-20220426224944251.png" alt="image-20220426224944251" style="zoom:67%;" />
+<img src="README.assets/image-20220426224944251.png" alt="image-20220426224944251" style="zoom:60%;" />
 
-<img src="README.assets/image-20220426225011381.png" alt="image-20220426225011381" style="zoom:67%;" />
+<img src="README.assets/image-20220426225011381.png" alt="image-20220426225011381" style="zoom:60%;" />
 
-<img src="README.assets/image-20220426225038722.png" alt="image-20220426225038722" style="zoom:67%;" />
+<img src="README.assets/image-20220426225038722.png" alt="image-20220426225038722" style="zoom:60%;" />
 
 ## Usage
 
