@@ -73,7 +73,7 @@ pip install requirements.txt
 
     You can change the weights of losses, try various backbones or use different data augmentation strategy. There is also some modules coded but not used in this work, like adversarial training, refiner, weighted multiple output and supervision, etc.
 
-    ![config](README.assets/config.png)
+    ![image-20220426234911555](README.assets/config.png)
 
 ## Download
 
