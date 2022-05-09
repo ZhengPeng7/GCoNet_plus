@@ -12,7 +12,7 @@ introducing our new group collaborating module (GCM) conditioning the inconsiste
 design a series of simple components as follows: i) a recurrent auxiliary classification module (RACM) promotes model learning at
 semantic-level; ii) a confidence enhancement module (CEM) helps model improvement on the quality of the final predictions; and iii) a
 group-based symmetric triplet (GST) loss guides model learn more discriminative features. Extensive experiments on three challenging
-benchmarks, i.e., CoCA, CoSOD3k, and CoSal2015, demonstrate that our GCoNet+ outperforms existing 11 cutting-edge models. Code
+benchmarks, i.e., CoCA, CoSOD3k, and CoSal2015, demonstrate that our GCoNet+ outperforms existing 13 cutting-edge models. Code
 has been released at [https://github.com/ZhengPeng7/GCoNet_plus](https://github.com/ZhengPeng7/GCoNet_plus).
 
 ## Framework Overview
@@ -21,7 +21,7 @@ has been released at [https://github.com/ZhengPeng7/GCoNet_plus](https://github.
 
 ## Result
 
-+ Comparison with the previous state-of-the-art methods:
++ Comparison with the previous state-of-the-art methods with different training sets:
 
 <img src="README.assets/image-20220426224731550.png" alt="image-20220426224731550"  />
 
@@ -76,11 +76,13 @@ has been released at [https://github.com/ZhengPeng7/GCoNet_plus](https://github.
 
 ## Download
 
-​	Find **well trained models** + **predicted saliency maps** and all other stuff on my [google-drive folder for this work](https://drive.google.com/drive/folders/1SIr_wKT3MkZLtZ0jacOOZ_Y5xnl9-OPw?usp=sharing).
+​	Find **well trained models** + **predicted saliency maps** and all other stuff on my [google-drive folder for this work](https://drive.google.com/drive/folders/1SIr_wKT3MkZLtZ0jacOOZ_Y5xnl9-OPw?usp=sharing):
+
+![GD_content](README.assets/GD_content.png)
 
 ## Acknowledgement
 
-We appreciate the codebases of [GICD](https://github.com/zzhanghub/gicd), [GCoNet](https://github.com/fanq15/GCoNet).
+We appreciate the codebases of [GICD](https://github.com/zzhanghub/gicd), [GCoNet](https://github.com/fanq15/GCoNet). Thanks for the CoSOD evaluation toolbox provided in [eval-co-sod](https://github.com/zzhanghub/eval-co-sod).
 
 ## Contact
 
