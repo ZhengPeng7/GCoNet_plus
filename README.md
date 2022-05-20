@@ -40,24 +40,24 @@ In this paper, we present a novel end-to-end group collaborative learning networ
 
     ```
     +-- datasets
-    |	+-- sod
-    |   	+-- images
-    |   		+-- DUTS_class
-    |   		+-- COCO-9k
-    |   		...
-    |   		+-- CoSal2015
-    |   	+-- gts
-    |   		+-- DUTS_class
-    |   		+-- COCO-9k
-    |   		...
-    |   		+-- CoSal2015
-    |	...
+    |   +-- sod
+    |       +-- images
+    |           +-- DUTS_class
+    |           +-- COCO-9k
+    |           ...
+    |           +-- CoSal2015
+    |       +-- gts
+    |           +-- DUTS_class
+    |           +-- COCO-9k
+    |           ...
+    |           +-- CoSal2015
+    |   ...
     ...
     +-- codes
-    |	+-- sod
-    |   	+-- GCoNet_plus
-    |   	...
-    |	...
+    |   +-- sod
+    |       +-- GCoNet_plus
+    |       ...
+    |   ...
     ...
     ```
 
