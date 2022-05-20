@@ -13,7 +13,6 @@ class Config():
         # Mask
         losses = ['sal', 'cls', 'contrast', 'cls_mask']
         self.loss = losses[:]
-        self.split_mask = True and 'cls_mask' in self.loss
         self.cls_mask_operation = ['x', '+', 'c'][0]
         # Loss + Triplet Loss
         self.lambdas_sal_last = {
@@ -24,13 +23,14 @@ class Config():
             'ssim': 1 * 0,          # help contours
             'mse': 150 * 0,         # can smooth the saliency map
             'reg': 100 * 0,
-            'triplet': 3 * 0 * ('cls' in self.loss),
+            'triplet': 3 * 1 * ('cls' in self.loss),
         }
 
         # DB
         self.db_output_decoder = True
         self.db_k = 300
         self.db_k_alpha = 1
+        self.split_mask = True and 'cls_mask' in self.loss
         self.db_mask = False and self.split_mask
 
         # Triplet Loss
@@ -45,7 +45,7 @@ class Config():
             self.batch_size = 16
         else:
             if self.bb != 'vgg16':
-                self.batch_size = 32
+                self.batch_size = 26
             else:
                 self.batch_size = 48
         self.db_output_refiner = False and self.refine

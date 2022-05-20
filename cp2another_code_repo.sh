@@ -1,10 +1,11 @@
-repo="bsl_aug_BI_mask_db300"
+# Set dst repo here.
+repo="T3-1_code"
 mkdir ../${repo}
 mkdir ../${repo}/evaluation
 mkdir ../${repo}/models
 
-cp ../GCoNet_ext/*.sh ../${repo}
-cp ../GCoNet_ext/*.py ../${repo}
-cp ../GCoNet_ext/evaluation/*.py ../${repo}/evaluation
-cp ../GCoNet_ext/models/*.py ../${repo}/models
-mv ../${repo}/gco.sh ../${repo}/${repo}_gco.sh
+cp ./*.sh ../${repo}
+cp ./*.py ../${repo}
+cp ./evaluation/*.py ../${repo}/evaluation
+cp ./models/*.py ../${repo}/models
+# mv ../${repo}/gco.sh ../${repo}/${repo}_gco.sh

@@ -7,11 +7,11 @@
 # Run python script
 method="gconet_$1"
 size=256
-epochs=150
-val_last=60
+epochs=350
+val_last=50
 
 # Train
-python train.py --trainset DUTS_class --size ${size} --ckpt_dir ckpt/${method} --epochs ${epochs} --val_dir tmp4val_${method}
+CUDA_VISIBLE_DEVICES=0 python train.py --trainset DUTS_class --size ${size} --ckpt_dir ckpt/${method} --epochs ${epochs} --val_dir tmp4val_${method}
 
 # # # Show validation results
 # # python collect_bests.py
@@ -19,15 +19,15 @@ python train.py --trainset DUTS_class --size ${size} --ckpt_dir ckpt/${method} -
 # Test
 for ((ep=${epochs}-${val_last};ep<${epochs};ep++))
 do
-pred_dir=/home/pz1/datasets/sod/preds/${method}/ep${ep}
+pred_dir=/root/datasets/sod/preds/${method}/ep${ep}
 rm -rf ${pred_dir}
-python test.py --pred_dir ${pred_dir} --ckpt ckpt/${method}/ep${ep}.pth --size ${size}
+CUDA_VISIBLE_DEVICES=0 python test.py --pred_dir ${pred_dir} --ckpt ckpt/${method}/ep${ep}.pth --size ${size}
 done
 
 
 # Eval
 cd evaluation
-python main.py --methods ${method}
+CUDA_VISIBLE_DEVICES=0 python main.py --methods ${method}
 python sort_results.py
 python select_results.py
 cd ..

@@ -57,7 +57,7 @@ def main(cfg):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--datasets', type=str, default='CoCA+CoSOD3k+CoSal2015')
-    parser.add_argument('--gt_dir', type=str, default='/home/pz1/datasets/sod/gts', help='GT')
+    parser.add_argument('--gt_dir', type=str, default='/root/datasets/sod/gts', help='GT')
     parser.add_argument('--cuda', type=bool, default=True)
     config = parser.parse_args()
     main(config)

@@ -202,8 +202,8 @@ if __name__ == "__main__":
     parser.add_argument('--methods', type=str, default='GCoNet_ext')
     parser.add_argument('--datasets', type=str, default='CoCA+CoSOD3k+CoSal2015')
 
-    parser.add_argument('--gt_dir', type=str, default='/home/pz1/datasets/sod/gts', help='GT')
-    parser.add_argument('--pred_dir', type=str, default='/home/pz1/datasets/sod/preds', help='predictions')
+    parser.add_argument('--gt_dir', type=str, default='/root/datasets/sod/gts', help='GT')
+    parser.add_argument('--pred_dir', type=str, default='/root/datasets/sod/preds', help='predictions')
     parser.add_argument('--output_dir', type=str, default='./output/details', help='saving measurements here.')
     parser.add_argument('--output_figure', type=str, default='./output/figures', help='saving figures here.')
 

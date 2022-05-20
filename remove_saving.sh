@@ -15,4 +15,4 @@ rm -r evaluation/${method}_*.png
 rm -r evaluation/${method}_*
 
 # # Test -- too slow, put at the last 
-# rm -r /home/pz1/datasets/sod/preds/${method}*
+# rm -r /root/datasets/sod/preds/${method}*

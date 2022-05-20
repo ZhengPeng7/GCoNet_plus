@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-move_best_results_here = True
+move_best_results_here = False
 
 record = ['dataset', 'ckpt', 'Emax', 'Smeasure', 'Fmax', 'MAE', 'Emean', 'Fmean']
 measurement = 'Emax'
@@ -42,6 +42,7 @@ print('CoSal2015:\n', best_cosal_scores)
 # Overal relative Emax improvement on three datasets
 if measurement == 'Emax':
     gco_scores = {'CoCA': 0.760, 'CoSOD3k': 0.860, 'CoSal2015': 0.887}
+    gco_scores_Smeasure = {'CoCA': 0.673, 'CoSOD3k': 0.802, 'CoSal2015': 0.845}
 elif measurement == 'Smeasure':
     gco_scores = {'CoCA': 0.673, 'CoSOD3k': 0.802, 'CoSal2015': 0.845}
 elif measurement == 'Fmax':
@@ -53,16 +54,19 @@ elif measurement == 'Fmean':
 ckpts = list(set(ss_ar[:, 1].squeeze().tolist()))
 improvements_mean = []
 improvements_lst = []
+improvements_mean_Smeasure = []
+improvements_lst_Smeasure = []
 for ckpt in ckpts:
     scores = ss_ar[ss_ar[:, 1] == ckpt]
     if scores.shape[0] != len(gco_scores):
         improvements_mean.append(-1)
         improvements_lst.append([-1, -1, 1])
+        improvements_mean_Smeasure.append(-1)
+        improvements_lst_Smeasure.append([-1, -1, 1])
         continue
     score_coca = float(scores[scores[:, 0] == 'CoCA'][0][score_idx])
     score_cosod = float(scores[scores[:, 0] == 'CoSOD3k'][0][score_idx])
     score_cosal = float(scores[scores[:, 0] == 'CoSal2015'][0][score_idx])
-
     improvements = [
         (score_coca - gco_scores['CoCA']) / gco_scores['CoCA'],
         (score_cosod - gco_scores['CoSOD3k']) / gco_scores['CoSOD3k'],
@@ -71,15 +75,44 @@ for ckpt in ckpts:
     improvement_mean = np.mean(improvements)
     improvements_mean.append(improvement_mean)
     improvements_lst.append(improvements)
-best_improvement_index = np.argsort(improvements_mean).tolist()[-1]
-best_ckpt = ckpts[best_improvement_index]
-best_improvement_mean = improvements_mean[best_improvement_index]
-best_improvements = improvements_lst[best_improvement_index]
+
+    # Smeasure
+    score_coca = float(scores[scores[:, 0] == 'CoCA'][0][record.index('Smeasure')])
+    score_cosod = float(scores[scores[:, 0] == 'CoSOD3k'][0][record.index('Smeasure')])
+    score_cosal = float(scores[scores[:, 0] == 'CoSal2015'][0][record.index('Smeasure')])
+    improvements_Smeasure = [
+        (score_coca - gco_scores_Smeasure['CoCA']) / gco_scores_Smeasure['CoCA'],
+        (score_cosod - gco_scores_Smeasure['CoSOD3k']) / gco_scores_Smeasure['CoSOD3k'],
+        (score_cosal - gco_scores_Smeasure['CoSal2015']) / gco_scores_Smeasure['CoSal2015']
+    ]
+    improvement_mean_Smeasure = np.mean(improvements_Smeasure)
+    improvements_mean_Smeasure.append(improvement_mean_Smeasure)
+    improvements_lst_Smeasure.append(improvements_Smeasure)
+best_measurement = 'Emax'
+if best_measurement == 'Emax':
+    best_improvement_index = np.argsort(improvements_mean).tolist()[-1]
+    best_ckpt = ckpts[best_improvement_index]
+    best_improvement_mean = improvements_mean[best_improvement_index]
+    best_improvements = improvements_lst[best_improvement_index]
+
+    best_improvement_mean_Smeasure = improvements_mean_Smeasure[best_improvement_index]
+    best_improvements_Smeasure = improvements_lst_Smeasure[best_improvement_index]
+elif best_measurement == 'Smeasure':
+    best_improvement_index = np.argsort(improvements_mean_Smeasure).tolist()[-1]
+    best_ckpt = ckpts[best_improvement_index]
+    best_improvement_mean_Smeasure = improvements_mean_Smeasure[best_improvement_index]
+    best_improvements_Smeasure = improvements_lst_Smeasure[best_improvement_index]
+
+    best_improvement_mean = improvements_mean[best_improvement_index]
+    best_improvements = improvements_lst[best_improvement_index]
 
 print('The overall best one:')
 print(ss_ar[ss_ar[:, 1] == best_ckpt])
-print('Got improvements on CoCA-{:.3f}%, CoSOD3k-{:.3f}%, CoSal2015-{:.3f}%, mean_improvement: {:.3f}%.'.format(
+print('Got Emax improvements on CoCA-{:.3f}%, CoSOD3k-{:.3f}%, CoSal2015-{:.3f}%, mean_improvement: {:.3f}%.'.format(
     best_improvements[0]*100, best_improvements[1]*100, best_improvements[2]*100, best_improvement_mean*100
+))
+print('Got Smes improvements on CoCA-{:.3f}%, CoSOD3k-{:.3f}%, CoSal2015-{:.3f}%, mean_improvement: {:.3f}%.'.format(
+    best_improvements_Smeasure[0]*100, best_improvements_Smeasure[1]*100, best_improvements_Smeasure[2]*100, best_improvement_mean_Smeasure*100
 ))
 trial = int(best_ckpt.split('_')[-1].split('-')[0])
 ep = int(best_ckpt.split('ep')[-1].split(':')[0])
@@ -87,7 +120,7 @@ if move_best_results_here:
     trial, ep = 'gconet_{}'.format(trial), 'ep{}'.format(ep)
     dr = os.path.join(trial, ep)
     dst = '-'.join((trial, ep))
-    shutil.move(os.path.join('/home/pz1/datasets/sod/preds', dr), dst)
+    shutil.move(os.path.join('/root/datasets/sod/preds', dr), dst)
 
 
 # model_indices = sorted([fname.split('_')[-1] for fname in os.listdir('output/details') if 'gconet_' in fname])
