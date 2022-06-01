@@ -89,6 +89,25 @@ In this paper, we present a novel end-to-end group collaborative learning networ
 
 We appreciate the codebases of [GICD](https://github.com/zzhanghub/gicd), [GCoNet](https://github.com/fanq15/GCoNet). Thanks for the CoSOD evaluation toolbox provided in [eval-co-sod](https://github.com/zzhanghub/eval-co-sod).
 
+### Citation
+
+```
+@article{zheng2022gcop,
+  title = {GCoNet+: A Stronger Group Collaborative Co-Salient Object Detector},
+  author = {Zheng, Peng and Fu, Huazhu and Fan, Deng-Ping and Fan, Qi and Qin, Jie and Van Gool, Luc},
+  journal = {arXiv preprint arXiv:2205.15469},
+  year = {2022},
+}
+@inproceedings{fan2021gconet,
+  title={Group Collaborative Learning for Co-Salient Object Detection},
+  author={Fan, Qi and Fan, Deng-Ping and Fu, Huazhu and Tang, Chi-Keung and Shao, Ling and Tai, Yu-Wing},
+  booktitle={CVPR},
+  year={2021}
+}
+```
+
+
+
 ## Contact
 
 Any question, discussion or even complaint, feel free to leave issues here or send me e-mails (zhengpeng0108@gmail.com).
