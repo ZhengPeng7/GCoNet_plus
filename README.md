@@ -1,5 +1,5 @@
 # GCoNet+
-This repo is the official implementation of "GCoNet+: A Stronger Group Collaborative Co-Salient Object Detector".
+This repo is the official implementation of "**GCoNet+: A Stronger Group Collaborative Co-Salient Object Detector**". [[arXiv](https://arxiv.org/abs/2205.15469)] [[code](https://github.com/ZhengPeng7/GCoNet_plus)] [[materials](https://drive.google.com/drive/folders/1SIr_wKT3MkZLtZ0jacOOZ_Y5xnl9-OPw?usp=sharing)]
 
 ## Abstract
 
@@ -15,7 +15,7 @@ In this paper, we present a novel end-to-end group collaborative learning networ
 
 + Comparison with the previous state-of-the-art methods with different training sets:
 
-<img src="README.assets/image-20220426224731550.png" alt="image-20220426224731550"  />
+![image-20220601123106208](README.assets/image-20220426224731550.png)
 
 + Ablation study:
 
