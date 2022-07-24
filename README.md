@@ -112,7 +112,7 @@ We appreciate the codebases of [GICD](https://github.com/zzhanghub/gicd), [GCoNe
 ```
 @article{zheng2022gconet+,
   title = {GCoNet+: A Stronger Group Collaborative Co-Salient Object Detector},
-  author = {Zheng, Peng and Fu, Huazhu and Fan, Deng-Ping and Fan, Qi and Qin, Jie and Van Gool, Luc},
+  author = {Zheng, Peng and Fu, Huazhu and Fan, Deng-Ping and Fan, Qi and Qin, Jie, Tai, Yu-Wing and Tang, Chi-Keung and Van Gool, Luc},
   journal = {arXiv preprint arXiv:2205.15469},
   year = {2022},
 }
