@@ -3,7 +3,7 @@ This repo is the official implementation of "**GCoNet+: A Stronger Group Collabo
 
 [[**arXiv**](https://arxiv.org/abs/2205.15469)] [[**code**](https://github.com/ZhengPeng7/GCoNet_plus)] [[**stuff**](https://drive.google.com/drive/folders/1SIr_wKT3MkZLtZ0jacOOZ_Y5xnl9-OPw?usp=sharing)]
 
-**Try our online inference**: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1nD8xm9DGPJEz1Xv7LQywyuzPQsIlkqxQ#scrollTo=YRlC6ANLCp3R)
+**Try our online demo for inference**: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1nD8xm9DGPJEz1Xv7LQywyuzPQsIlkqxQ#scrollTo=YRlC6ANLCp3R)
 
 [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/gconet-a-stronger-group-collaborative-co/co-salient-object-detection-on-coca)](https://paperswithcode.com/sota/co-salient-object-detection-on-coca?p=gconet-a-stronger-group-collaborative-co) [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/gconet-a-stronger-group-collaborative-co/co-salient-object-detection-on-cosod3k)](https://paperswithcode.com/sota/co-salient-object-detection-on-cosod3k?p=gconet-a-stronger-group-collaborative-co) [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/gconet-a-stronger-group-collaborative-co/co-salient-object-detection-on-cosal2015)](https://paperswithcode.com/sota/co-salient-object-detection-on-cosal2015?p=gconet-a-stronger-group-collaborative-co)
 
