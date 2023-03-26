@@ -1,5 +1,5 @@
 # GCoNet+
-This repo is the official implementation of "**GCoNet+: A Stronger Group Collaborative Co-Salient Object Detector**".
+This repo is the official implementation of "**GCoNet+: A Stronger Group Collaborative Co-Salient Object Detector**" (T-PAMI 2023).
 
 [[**arXiv**](https://arxiv.org/abs/2205.15469)] [[**code**](https://github.com/ZhengPeng7/GCoNet_plus)] [[**stuff**](https://drive.google.com/drive/folders/1SIr_wKT3MkZLtZ0jacOOZ_Y5xnl9-OPw?usp=sharing)]
 
@@ -115,8 +115,8 @@ We appreciate the codebases of [GICD](https://github.com/zzhanghub/gicd), [GCoNe
 @article{zheng2022gconet+,
   title = {GCoNet+: A Stronger Group Collaborative Co-Salient Object Detector},
   author = {Zheng, Peng and Fu, Huazhu and Fan, Deng-Ping and Fan, Qi and Qin, Jie, Tai, Yu-Wing and Tang, Chi-Keung and Van Gool, Luc},
-  journal = {arXiv preprint arXiv:2205.15469},
-  year = {2022},
+  journal = {PAMI},
+  year = {2023},
 }
 @inproceedings{fan2021gconet,
   title = {Group Collaborative Learning for Co-Salient Object Detection},
