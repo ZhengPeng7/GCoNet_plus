@@ -1,7 +1,7 @@
 # GCoNet+
 This repo is the official implementation of "[**GCoNet+: A Stronger Group Collaborative Co-Salient Object Detector**](https://arxiv.org/abs/2205.15469)" (T-PAMI 2023).
 
-[[**arXiv**](https://arxiv.org/abs/2205.15469)] [[**code**](https://github.com/ZhengPeng7/GCoNet_plus)] [[**stuff**](https://drive.google.com/drive/folders/1SIr_wKT3MkZLtZ0jacOOZ_Y5xnl9-OPw?usp=sharing)]
+[[**arXiv**](https://arxiv.org/abs/2205.15469)] [[**code**](https://github.com/ZhengPeng7/GCoNet_plus)] [[**stuff**](https://drive.google.com/drive/folders/1SIr_wKT3MkZLtZ0jacOOZ_Y5xnl9-OPw?usp=sharing)] [[**中文版**](https://github.com/ZhengPeng7/GCoNet_plus/releases/tag/paper_CN)]
 
 **Try our online demo for inference**: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1nD8xm9DGPJEz1Xv7LQywyuzPQsIlkqxQ#scrollTo=YRlC6ANLCp3R)
 
