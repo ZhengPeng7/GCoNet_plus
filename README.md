@@ -1,9 +1,20 @@
-# GCoNet+
-This repo is the official implementation of "[**GCoNet+: A Stronger Group Collaborative Co-Salient Object Detector**](https://arxiv.org/abs/2205.15469)" (T-PAMI 2023).
+# <p align=center>`GCoNet+: A Stronger Group Collaborative Co-Salient Object Detector`</p>
+
+This repo is the official implementation of "[**GCoNet+: A Stronger Group Collaborative Co-Salient Object Detector**](https://arxiv.org/abs/2205.15469)" (___T-PAMI 2023___).
+
+> **Authors:**
+> [Peng Zheng](https://scholar.google.com/citations?user=TZRzWOsAAAAJ),
+> [Huazhu Fu](https://scholar.google.com/citations?user=jCvUBYMAAAAJ),
+> [Deng-Ping Fan](https://scholar.google.com/citations?user=kakwJ5QAAAAJ),
+> [Qi Fan](https://scholar.google.com/citations?user=da23smAAAAAJ),
+> [Jie Qin](https://scholar.google.com/citations?user=mhPGcuwAAAAJ),
+> [Yu-Wing Tai](https://scholar.google.com/citations?user=nFhLmFkAAAAJ),
+> [Chi-Keung Tang](https://scholar.google.com/citations?user=EWfpM74AAAAJ), &
+> [Luc Van Gool](https://scholar.google.com/citations?user=TwMib_QAAAAJ).
 
 [[**arXiv**](https://arxiv.org/abs/2205.15469)] [[**code**](https://github.com/ZhengPeng7/GCoNet_plus)] [[**stuff**](https://drive.google.com/drive/folders/1SIr_wKT3MkZLtZ0jacOOZ_Y5xnl9-OPw?usp=sharing)] [[**中文版**](https://github.com/ZhengPeng7/GCoNet_plus/releases/tag/paper_CN)]
 
-**Try our online demo for inference**: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1nD8xm9DGPJEz1Xv7LQywyuzPQsIlkqxQ#scrollTo=YRlC6ANLCp3R)
+**Try our online demo for inference**: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1nD8xm9DGPJEz1Xv7LQywyuzPQsIlkqxQ#scrollTo=YRlC6ANLCp3R) [![Hugging Face Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-blue)](https://huggingface.co/spaces/ZhengPeng7/GCoNet_plus_demo)
 
 [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/gconet-a-stronger-group-collaborative-co/co-salient-object-detection-on-coca)](https://paperswithcode.com/sota/co-salient-object-detection-on-coca?p=gconet-a-stronger-group-collaborative-co) [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/gconet-a-stronger-group-collaborative-co/co-salient-object-detection-on-cosod3k)](https://paperswithcode.com/sota/co-salient-object-detection-on-cosod3k?p=gconet-a-stronger-group-collaborative-co) [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/gconet-a-stronger-group-collaborative-co/co-salient-object-detection-on-cosal2015)](https://paperswithcode.com/sota/co-salient-object-detection-on-cosal2015?p=gconet-a-stronger-group-collaborative-co)
 
