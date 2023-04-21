@@ -1,6 +1,6 @@
 # <p align=center>`GCoNet+: A Stronger Group Collaborative Co-Salient Object Detector`</p>
 
-This repo is the official implementation of "[**GCoNet+: A Stronger Group Collaborative Co-Salient Object Detector**](https://arxiv.org/abs/2205.15469)" (___T-PAMI 2023___).
+This repo is the official implementation of "[**GCoNet+: A Stronger Group Collaborative Co-Salient Object Detector**](https://arxiv.org/pdf/2205.15469.pdf)" (___T-PAMI 2023___).
 
 > **Authors:**
 > [Peng Zheng](https://scholar.google.com/citations?user=TZRzWOsAAAAJ),
@@ -12,7 +12,7 @@ This repo is the official implementation of "[**GCoNet+: A Stronger Group Collab
 > [Chi-Keung Tang](https://scholar.google.com/citations?user=EWfpM74AAAAJ), &
 > [Luc Van Gool](https://scholar.google.com/citations?user=TwMib_QAAAAJ).
 
-[[**arXiv**](https://arxiv.org/abs/2205.15469)] [[**code**](https://github.com/ZhengPeng7/GCoNet_plus)] [[**stuff**](https://drive.google.com/drive/folders/1SIr_wKT3MkZLtZ0jacOOZ_Y5xnl9-OPw?usp=sharing)] [[**中文版**](https://github.com/ZhengPeng7/GCoNet_plus/releases/tag/paper_CN)]
+[[**arXiv**](https://arxiv.org/abs/2205.15469)] [[**IEEE**](https://ieeexplore.ieee.org/document/10093066)] [[**code**](https://github.com/ZhengPeng7/GCoNet_plus)] [[**stuff**](https://drive.google.com/drive/folders/1SIr_wKT3MkZLtZ0jacOOZ_Y5xnl9-OPw?usp=sharing)] [[**中文版**](https://github.com/ZhengPeng7/GCoNet_plus/releases/tag/paper_CN)]
 
 **Try our online demo for inference**: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1nD8xm9DGPJEz1Xv7LQywyuzPQsIlkqxQ#scrollTo=YRlC6ANLCp3R) [![Hugging Face Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-blue)](https://huggingface.co/spaces/ZhengPeng7/GCoNet_plus_demo)
 
@@ -124,10 +124,14 @@ We appreciate the codebases of [GICD](https://github.com/zzhanghub/gicd), [GCoNe
 
 ```
 @article{zheng2022gconet+,
-  title = {GCoNet+: A Stronger Group Collaborative Co-Salient Object Detector},
-  author = {Zheng, Peng and Fu, Huazhu and Fan, Deng-Ping and Fan, Qi and Qin, Jie, Tai, Yu-Wing and Tang, Chi-Keung and Van Gool, Luc},
-  journal = PAMI,
-  year = {2023},
+  author={Zheng, Peng and Fu, Huazhu and Fan, Deng-Ping and Fan, Qi and Qin, Jie and Tai, Yu-Wing and Tang, Chi-Keung and Van Gool, Luc},
+  journal={IEEE Transactions on Pattern Analysis and Machine Intelligence}, 
+  title={GCoNet+: A Stronger Group Collaborative Co-Salient Object Detector}, 
+  year={2023},
+  volume={},
+  number={},
+  pages={1-18},
+  doi={10.1109/TPAMI.2023.3264571}
 }
 @inproceedings{fan2021gconet,
   title = {Group Collaborative Learning for Co-Salient Object Detection},
