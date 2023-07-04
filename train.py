@@ -23,13 +23,13 @@ from util import generate_smoothed_gt
 from evaluation.dataloader import EvalDataset
 from evaluation.evaluator import Eval_thread
 
-from models.GCoNet import GCoNet
+from models.GCoNet_plus import GCoNet_plus
 
 
 # Parameter from command line
 parser = argparse.ArgumentParser(description='')
 parser.add_argument('--model',
-                    default='GCoNet',
+                    default='GCoNet_plus',
                     type=str,
                     help="Options: '', ''")
 parser.add_argument('--resume',
@@ -119,7 +119,7 @@ logger_loss_idx = 1
 # Init model
 device = torch.device("cuda")
 
-model = GCoNet()
+model = GCoNet_plus()
 model = model.to(device)
 if config.lambda_adv:
     from adv import Discriminator

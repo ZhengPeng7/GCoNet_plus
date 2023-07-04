@@ -199,7 +199,7 @@ def main(cfg):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--methods', type=str, default='GCoNet_ext')
+    parser.add_argument('--methods', type=str, default='GCoNet_plus')
     parser.add_argument('--datasets', type=str, default='CoCA+CoSOD3k+CoSal2015')
 
     parser.add_argument('--gt_dir', type=str, default='/root/datasets/sod/gts', help='GT')

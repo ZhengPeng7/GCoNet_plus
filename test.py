@@ -5,7 +5,7 @@ import torch
 from torch import nn
 
 from dataset import get_loader
-from models.GCoNet import GCoNet
+from models.GCoNet_plus import GCoNet_plus
 from util import save_tensor_img
 from config import Config
 
@@ -15,7 +15,7 @@ def main(args):
     config = Config()
 
     device = torch.device("cuda")
-    model = GCoNet()
+    model = GCoNet_plus()
     model = model.to(device)
     print('Testing with model {}'.format(args.ckpt))
     gconet_dict = torch.load(args.ckpt)
@@ -72,7 +72,7 @@ if __name__ == '__main__':
     # Parameter from command line
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('--model',
-                        default='GCoNet',
+                        default='GCoNet_plus',
                         type=str,
                         help="Options: '', ''")
     parser.add_argument('--testsets',
@@ -83,8 +83,8 @@ if __name__ == '__main__':
                         default=224,
                         type=int,
                         help='input size')
-    parser.add_argument('--ckpt', default='./ckpt/gconet/final.pth', type=str, help='model folder')
-    parser.add_argument('--pred_dir', default='/root/datasets/sod/preds/GCoNet_ext', type=str, help='Output folder')
+    parser.add_argument('--ckpt', default='./ckpt/GCoNet_plus/final.pth', type=str, help='model folder')
+    parser.add_argument('--pred_dir', default='/root/datasets/sod/preds/GCoNet_plus', type=str, help='Output folder')
 
     args = parser.parse_args()
 

@@ -12,9 +12,9 @@ from models.modules import ResBlk, DSLayer, half_DSLayer, CoAttLayer, RefUnet, D
 from config import Config
 
 
-class GCoNet(nn.Module):
+class GCoNet_plus(nn.Module):
     def __init__(self):
-        super(GCoNet, self).__init__()
+        super(GCoNet_plus, self).__init__()
         self.config = Config()
         bb = self.config.bb
         if bb == 'vgg16':
