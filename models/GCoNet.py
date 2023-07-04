@@ -111,7 +111,7 @@ class GCoNet(nn.Module):
         if self.config.cls_mask_operation == 'c':
             self.conv_cat_mask = nn.Conv2d(4, 3, 1, 1, 0)
 
-    def forward(self, x):
+    def forward(self, x, vis=None):
         ########## Encoder ##########
 
         [N, _, H, W] = x.size()
@@ -123,6 +123,8 @@ class GCoNet(nn.Module):
 
         if 'cls' in self.config.loss:
             _x5 = self.avgpool(x5)
+            if vis == 'CAM':
+                cam = torch.mul(x5, _x5)
             _x5 = _x5.view(_x5.size(0), -1)
             pred_cls = self.classifier(_x5)
 
@@ -179,6 +181,11 @@ class GCoNet(nn.Module):
             p1_out = self.db_output_decoder(p1)
         else:
             p1_out = self.conv_out1(p1)
+        if vis == 'CAM':
+            scaled_preds.append(cam)
+        elif vis == 'FPN':
+            for p in [p5, p4, p3, p2, p1]:
+                scaled_preds.append(p)
         scaled_preds.append(p1_out)
 
         if self.config.refine == 1:
