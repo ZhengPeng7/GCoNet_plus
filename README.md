@@ -1,6 +1,7 @@
 # <p align=center>`GCoNet+: A Stronger Group Collaborative Co-Salient Object Detector`</p>
 
 This repo is the official implementation of "[**GCoNet+: A Stronger Group Collaborative Co-Salient Object Detector**](https://arxiv.org/pdf/2205.15469.pdf)" (___T-PAMI 2023___).
+> Note that this work has more than 70% new staff (methods, discussion, etc.) and much better performance compared with the GCoNet (the conference version).
 
 > **Authors:**
 > [Peng Zheng](https://scholar.google.com/citations?user=TZRzWOsAAAAJ),
