@@ -47,7 +47,7 @@ In this paper, we present a novel end-to-end group collaborative learning networ
 
 To see the better performance of our **GCoNet+**, we select the currently latest and top models ([UFO-arXiv2022](https://github.com/suyukun666/UFO), [DCFM-CVPR2022](https://github.com/siyueyu/DCFM), and [CADC-ICCV2021](https://github.com/nnizhang/CADC)) for the qualitative comparison.
 
-We not only show the selected extremely hard samples in the test sets, but also simply put the unscreened samples (the first 10 samples in the first group in CoCA) for the more objective and fair qualitative comparisons.
+We not only show the selected extremely hard samples in the test sets but also simply put the unscreened samples (the first 10 samples in the first group in CoCA) for more objective and fair qualitative comparisons.
 
 + The first^2 samples:
 
@@ -101,19 +101,19 @@ We not only show the selected extremely hard samples in the test sets, but also 
 
     `./gco.sh`
 
-    If you can apply more GPUs on DGX cluster, you can `./sub_by_id.sh` to submit multiple times for more stable results.
+    If you can apply more GPUs on the DGX cluster, you can `./sub_by_id.sh` to submit multiple times for more stable results.
 
     If you have the OOM problem, plz decrease `batch_size` in `config.py`.
 
 5. **Adapt the settings of modules in config.py**
 
-    You can change the weights of losses, try various *backbones* or use different *data augmentation* strategy. There is also some modules coded but not used in this work, like *adversarial training*, the *refiner* in [BASNet](https://openaccess.thecvf.com/content_CVPR_2019/papers/Qin_BASNet_Boundary-Aware_Salient_Object_Detection_CVPR_2019_paper.pdf), weighted *multiple output and supervision* used in [GCoNet](https://openaccess.thecvf.com/content/CVPR2021/papers/Fan_Group_Collaborative_Learning_for_Co-Salient_Object_Detection_CVPR_2021_paper.pdf) and [GICD](https://www.ecva.net/papers/eccv_2020/papers_ECCV/papers/123570443.pdf), etc.
+    You can change the weights of losses, try various *backbones* or use different *data augmentation* strategies. There are also some modules coded but not used in this work, like *adversarial training*, the *refiner* in [BASNet](https://openaccess.thecvf.com/content_CVPR_2019/papers/Qin_BASNet_Boundary-Aware_Salient_Object_Detection_CVPR_2019_paper.pdf), weighted *multiple output and supervision* used in [GCoNet](https://openaccess.thecvf.com/content/CVPR2021/papers/Fan_Group_Collaborative_Learning_for_Co-Salient_Object_Detection_CVPR_2021_paper.pdf) and [GICD](https://www.ecva.net/papers/eccv_2020/papers_ECCV/papers/123570443.pdf), etc.
 
     ![image-20220426234911555](README.assets/config.png)
 
 ## Download
 
-​	Find **well trained models** + **predicted saliency maps** and all other stuff on my [google-drive folder for this work](https://drive.google.com/drive/folders/1SIr_wKT3MkZLtZ0jacOOZ_Y5xnl9-OPw?usp=sharing):
+​	Find **well-trained models** + **predicted saliency maps** and all other stuff on my [google-drive folder for this work](https://drive.google.com/drive/folders/1SIr_wKT3MkZLtZ0jacOOZ_Y5xnl9-OPw?usp=sharing):
 
 ![GD_content](README.assets/GD_content.png)
 
@@ -129,9 +129,9 @@ We appreciate the codebases of [GICD](https://github.com/zzhanghub/gicd), [GCoNe
   journal={IEEE Transactions on Pattern Analysis and Machine Intelligence}, 
   title={GCoNet+: A Stronger Group Collaborative Co-Salient Object Detector}, 
   year={2023},
-  volume={},
-  number={},
-  pages={1-18},
+  volume={45},
+  number={9},
+  pages={10929-10946},
   doi={10.1109/TPAMI.2023.3264571}
 }
 @inproceedings{fan2021gconet,
