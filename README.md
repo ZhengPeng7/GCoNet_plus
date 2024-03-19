@@ -70,7 +70,12 @@ We not only show the selected extremely hard samples in the test sets but also s
 
 2. **Datasets preparation**
 
-    Download all the single train/test datasets from my [google-drive](https://drive.google.com/drive/folders/1jRJKv56QSa3gOp4w_64tVmzNMT_te-Kv?usp=sharing), or directly download the `datasets.zip` in the folder for all the data you need as following structure shows (COCO-SEG is too big, so you can download it separately). The file directory structure on my machine is as follows:
+    Download necessary datasets:  
+    from my google-drive: [DUTS_class](https://drive.google.com/file/d/1SKaxMtIaLJk2CRdSbf-S0m6vMag1grmd/view?usp=drive_link), [COCO-9k](https://drive.google.com/file/d/1r6tRcSlvH8bXhaZD2VtGmHDxsXFl1v4z/view?usp=drive_link), [COCO-SEG](https://drive.google.com/file/d/1hkn2wP3uArctbst11XP4iKOCTa3tud5-/view?usp=drive_link), and [CoSOD_testsets](https://drive.google.com/file/d/1pTjxK4gu5kfVeR4Fdc1shZgk47FvybCe/view?usp=drive_link), or  
+   from my BaiduDisk: [DUTS_class](https://pan.baidu.com/s/1xNUaar-bzS3apJpHQED9dg?pwd=PSWD), [COCO-9k](https://pan.baidu.com/s/1AEH593Sq1XGZHhgoT4fhfg?pwd=PSWD), [COCO-SEG](https://pan.baidu.com/s/1_1VmtOHBxDKp9qq55AARXA?pwd=PSWD), and [CoSOD_testsets](https://pan.baidu.com/s/136TGYw_dh7KtVAHw6Kgknw?pwd=PSWD).  
+   The `CoSOD_testsets` contains CoCA, CoSOD3k and CoSal2015.
+
+   The file directory structure on my machine is as follows:
 
     ```
     +-- datasets
@@ -95,11 +100,11 @@ We not only show the selected extremely hard samples in the test sets but also s
     ...
     ```
 
-3. **Update the paths**
+4. **Update the paths**
 
     Replace all `/root/datasets/sod/GCoNet_plus` and `/root/codes/sod/GCoNet_plus` in this project to  `/YOUR_PATH/datasets/sod/GCoNet_plus` and `/YOUR_PATH/codes/sod/GCoNet_plus`, respectively.
 
-4. **Training + Test + Evaluate + Select the Best**
+5. **Training + Test + Evaluate + Select the Best**
 
     `./gco.sh`
 
@@ -107,7 +112,7 @@ We not only show the selected extremely hard samples in the test sets but also s
 
     If you have the OOM problem, plz decrease `batch_size` in `config.py`.
 
-5. **Adapt the settings of modules in config.py**
+6. **Adapt the settings of modules in config.py**
 
     You can change the weights of losses, try various *backbones* or use different *data augmentation* strategies. There are also some modules coded but not used in this work, like *adversarial training*, the *refiner* in [BASNet](https://openaccess.thecvf.com/content_CVPR_2019/papers/Qin_BASNet_Boundary-Aware_Salient_Object_Detection_CVPR_2019_paper.pdf), weighted *multiple output and supervision* used in [GCoNet](https://openaccess.thecvf.com/content/CVPR2021/papers/Fan_Group_Collaborative_Learning_for_Co-Salient_Object_Detection_CVPR_2021_paper.pdf) and [GICD](https://www.ecva.net/papers/eccv_2020/papers_ECCV/papers/123570443.pdf), etc.
 
