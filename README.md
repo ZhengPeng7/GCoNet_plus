@@ -71,8 +71,8 @@ We not only show the selected extremely hard samples in the test sets but also s
 2. **Datasets preparation**
 
     Download necessary datasets:  
-    from my google-drive: [DUTS_class](https://drive.google.com/file/d/1SKaxMtIaLJk2CRdSbf-S0m6vMag1grmd/view?usp=drive_link), [COCO-9k](https://drive.google.com/file/d/1r6tRcSlvH8bXhaZD2VtGmHDxsXFl1v4z/view?usp=drive_link), [COCO-SEG](https://drive.google.com/file/d/1hkn2wP3uArctbst11XP4iKOCTa3tud5-/view?usp=drive_link), and [CoSOD_testsets](https://drive.google.com/file/d/1pTjxK4gu5kfVeR4Fdc1shZgk47FvybCe/view?usp=drive_link), or  
-   from my BaiduDisk: [DUTS_class](https://pan.baidu.com/s/1xNUaar-bzS3apJpHQED9dg?pwd=PSWD), [COCO-9k](https://pan.baidu.com/s/1AEH593Sq1XGZHhgoT4fhfg?pwd=PSWD), [COCO-SEG](https://pan.baidu.com/s/1_1VmtOHBxDKp9qq55AARXA?pwd=PSWD), and [CoSOD_testsets](https://pan.baidu.com/s/136TGYw_dh7KtVAHw6Kgknw?pwd=PSWD).  
+    from my google-drive: [DUTS_class](https://drive.google.com/file/d/1SKaxMtIaLJk2CRdSbf-S0m6vMag1grmd/view?usp=drive_link), [COCO-9k](https://drive.google.com/file/d/1r6tRcSlvH8bXhaZD2VtGmHDxsXFl1v4z/view?usp=drive_link), [COCO-SEG](https://drive.google.com/file/d/1LIOt8mFubvLCJAMUXfgDLRYPLr2zfi9y/view?usp=drive_link), and [CoSOD_testsets](https://drive.google.com/file/d/1pTjxK4gu5kfVeR4Fdc1shZgk47FvybCe/view?usp=drive_link), or  
+    from my BaiduDisk: [DUTS_class](https://pan.baidu.com/s/1xNUaar-bzS3apJpHQED9dg?pwd=PSWD), [COCO-9k](https://pan.baidu.com/s/1AEH593Sq1XGZHhgoT4fhfg?pwd=PSWD), [COCO-SEG](https://pan.baidu.com/s/1amS0atRCh85S54CBdQpFDw?pwd=PSWD), and [CoSOD_testsets](https://pan.baidu.com/s/136TGYw_dh7KtVAHw6Kgknw?pwd=PSWD).  
    The `CoSOD_testsets` contains CoCA, CoSOD3k and CoSal2015.
 
    The file directory structure on my machine is as follows:
