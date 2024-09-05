@@ -105,7 +105,7 @@ class CoData(data.Dataset):
                 if 'enhance' in Config().preproc_methods:
                     image = color_enhance(image)
                 if 'pepper' in Config().preproc_methods:
-                    label = random_pepper(label)
+                    image = random_pepper(image)
 
             image, label = self.transform_image(image), self.transform_label(label)
 
